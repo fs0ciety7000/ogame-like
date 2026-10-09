@@ -3632,7 +3632,7 @@ function distributeLeviathan(txApp, game, state, now) {
     if (!findOrNull(txApp, "players", c.uid)) return;
     const owner = loadPlayer(txApp, game, c.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
-    const out = game.grantLeviathanReward(state, flushed.player);
+    const out = game.grantLeviathanReward(state, flushed.player, Math.random, now);
     const won = state.status === "killed";
     const mythic = won && i === 0 ? grantMythicTo(txApp, game, flushed.player, "leviathan", now) : "";
     const tokens = game.grantTokens(flushed.player, game.bossTokens(casino, won, i));
@@ -4996,7 +4996,7 @@ function payUnclaimedChallenge(txApp, game, ch, now) {
     if (!findOrNull(txApp, "players", uid)) return;
     const loaded = loadPlayer(txApp, game, uid);
     const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
-    const gain = game.grantChallengeReward(ch, flushed.player, { title: false });
+    const gain = game.grantChallengeReward(ch, flushed.player, { title: false, now });
     const tokens = game.grantTokens(flushed.player, game.challengeTokens(casino, game.challengeTierIndex(ch)));
     savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
     notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi versée", message: `Tu n'avais pas récupéré ta récompense du défi précédent : elle vient d'être versée (${game.describeGain(gain)}${tokens ? ` et ${game.tokensLabel(tokens)}` : ""}).`, createdAtMs: now, read: false, link: "/game", data: tokenNotifData({ resources: gain }, tokens) }]));

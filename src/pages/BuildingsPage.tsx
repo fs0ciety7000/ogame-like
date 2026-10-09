@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp, LayoutGrid, List, Lock, Wrench } from "lucide-react";
 import { Card, HudBrackets } from "@/components/ui/card";
-import { CostPill, HudChip, HudTag, LevelTicks } from "@/components/ui/hud";
+import { HudChip, HudTag, LevelTicks } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -46,7 +46,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelPulse, LevelUpBurst } from "@/components/ui/level-up-burst";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
-import { AffordReason, CostPills, secondsToAfford } from "@/components/ui/afford";
+import { AffordReason, CostPills, MissingReason, secondsToAfford } from "@/components/ui/afford";
 import { useProductionRates } from "@/hooks/useLiveResources";
 
 /* 6.12.0 (Q16) : vue liste par défaut sur téléphone au-delà de 10 bâtiments débloqués ; le choix est gardé par appareil. */
@@ -366,32 +366,23 @@ export function BuildingsPage() {
                       </Button>
                     ) : isLocked ? (
                       unlockInfo ? (
-                        "multi" in unlockInfo ? (
-                          <>
-                            <div className="mb-2 flex flex-wrap gap-1.5">
-                              {unlockInfo.resources.map((r) => (
-                                <CostPill key={r.label}>
-                                  {formatCompact(r.amount)} {r.label}
-                                </CostPill>
-                              ))}
-                            </div>
-                            <Button className="w-full" disabled={pending === building.id} onClick={() => void handleUnlock(building.id)}>
-                              Débloquer
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            {/* 6.11.9 : le coût passe dans une pastille (« Débloquer · 500 Nanocomposants » débordait à 375 px). */}
-                            <div className="mb-2 flex flex-wrap gap-1.5">
-                              <CostPill>
-                                {formatCompact(unlockInfo.amount)} {unlockInfo.label}
-                              </CostPill>
-                            </div>
-                            <Button className="w-full" disabled={pending === building.id} onClick={() => void handleUnlock(building.id)}>
-                              Débloquer
-                            </Button>
-                          </>
-                        )
+                        // 6.14.165 (S6, NJ-27) : comme « Améliorer » : pastilles « manque N », bouton grisé et raison en clair
+                        // tant qu'une ressource manque (avant : bouton orange, puis « Ressources insuffisantes » au toucher).
+                        (() => {
+                          const unlockCost: Partial<Record<ResourceId, number>> = Object.fromEntries(
+                            ("multi" in unlockInfo ? unlockInfo.resources : [unlockInfo]).map((r) => [r.resource, r.amount]),
+                          );
+                          const affordable = Object.entries(unlockCost).every(([r, n]) => (player.resources[r as ResourceId] ?? 0) >= (n ?? 0));
+                          return (
+                            <>
+                              <CostPills cost={unlockCost} stock={player.resources} className="mb-2" />
+                              <Button className="w-full" variant={affordable ? "primary" : "secondary"} disabled={pending === building.id || !affordable} onClick={() => void handleUnlock(building.id)}>
+                                Débloquer
+                              </Button>
+                              <MissingReason cost={unlockCost} stock={player.resources} rates={rates} />
+                            </>
+                          );
+                        })()
                       ) : (
                         <Button className="w-full" variant="secondary" disabled>
                           Débloqué via le Labo

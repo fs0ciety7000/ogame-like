@@ -76,6 +76,14 @@ mise, comptoir, butin, tribut, stock de colonie) restent à part, listés dans l
 - La prime du raid d'initiation (4 h de chaque ressource, égale sur les quatre) faisait presque tout le surplus de nano et de données
   du parcours joué (450 000 à 40 min). Elle suit désormais les coûts : 30 min de ferraille, 15 d'énergie, 5 de nano et de données
   (`startRewards`, invariant I50). Le Carnet est plafonné à 60 min de production par ressource commune.
-- Reste (lot RR-2, Q410) : le surplus dû à la production égale des quatre extracteurs ; options : échange direct commune ↔ commune au
-  comptoir, conseil « Échange ton surplus », ou nano et données dans les coûts des extracteurs. Proposition :
-  `docs/proposals/recompenses-du-depart.md`.
+- Reste (lot RR-2, Q410) : livré en 6.14.165, voir ci-dessous.
+
+## 6.14.165 (lot S6, RR-2, NJ-26) : surplus de nanocomposants et de données
+- Le comptoir acceptait déjà l'échange commune ↔ commune (et rare ↔ rare) à 1 pour 1 avant la taxe, mais la page disait le contraire.
+  Taux désormais réglables et affichés : `exchange.commonToCommon`, `exchange.rareToRare` (0 ferme l'échange, refusé au serveur).
+- Conseil « Échange ton surplus » dans « Que faire maintenant ? » : la commune la plus fournie en a ≥ `surplusAdviceRatio` (4) fois la
+  plus maigre et ≥ `surplusAdviceMin` (20 000), entrepôt non plein, pendant les `surplusAdviceDays` (3) premiers jours ; il propose la
+  quantité qui égalise les deux stocks (taxe comprise) et ouvre le comptoir prérempli (`?vendre=…&recevoir=…&quantite=…`).
+- Limité aux premiers jours : échanger tout le surplus toute la partie avance la 1re Ascension du profil moyen hors d'I29 (J14,8).
+  Simulateur : `--surplus` (`docs/proposals/recompenses-du-depart.md` §10).
+- Récompenses en heures d'un compte de moins de 24 h plafonnées à 60 min, reste en réserve du départ : voir `progression.md`.

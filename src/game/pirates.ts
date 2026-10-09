@@ -21,7 +21,7 @@ import { GameActionError } from "@/game/errors";
 import { describeGain, formatInt } from "@/game/format";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
-import { START_REWARD_RULES, tutorialRaidBounty } from "@/game/startRewards";
+import { productionReward, START_REWARD_RULES, tutorialRaidBounty } from "@/game/startRewards";
 import { TUTORIAL_RAID } from "@/game/story";
 import type { BattleReport, PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 
@@ -890,11 +890,12 @@ export function resolvePirateRaid(
     st.notoriety = Math.max(0, st.notoriety - 1);
     st.adapt = Math.max(PIRATE_RULES.adaptMin, st.adapt - PIRATE_RULES.adaptDown);
     player.lastDefeatAtMs = now;
-    notifications.push(note("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emporté ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrepôts protégés n'ont rien laissé à prendre.`, now));
+    // 6.14.165 (S6, NJ-29) : « Raid perdu : <faction> » (« Victoire de Le Chœur Silencieux » ne s'accordait pas).
+    notifications.push(note("combat-defender", `Raid perdu : ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emporté ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrepôts protégés n'ont rien laissé à prendre.`, now));
   } else {
     // 6.14.163 (S3, NJ-4) : le raid d'initiation (premier raid de la faction du tutoriel, lancé par la prise en main) verse
     // quelques minutes de production réparties comme les coûts, au lieu des heures de la faction (4 h : 216 000 de chaque à 15/s).
-    bounty = isTutorialRaid(player, faction.id, st) ? tutorialRaidBounty(player) : productionHours(player, faction.bounty.hours);
+    bounty = isTutorialRaid(player, faction.id, st) ? tutorialRaidBounty(player) : productionReward(player, faction.bounty.hours, now);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = (bounty[r] ?? 0) + faction.bounty.rare;
     // 5.16 : embargo : la prime grossit.
     if (activeTreaty(st, now)?.kind === "embargo") for (const r of Object.keys(bounty) as ResourceId[]) bounty[r] = Math.floor((bounty[r] ?? 0) * TREATY_RULES.embargoBounty);
@@ -920,7 +921,8 @@ export function resolvePirateRaid(
     notifications.push(
       note(
         "combat-defender",
-        combat.outcome === "draw" ? `${faction.name} repoussé de justesse` : `${faction.name} repoussé !`,
+        // 6.14.165 (S6, NJ-29) : « Raid repoussé : <faction> » s'accorde avec toutes les factions (« Confrérie du Vide repoussé ! »).
+        combat.outcome === "draw" ? `Raid repoussé de justesse : ${faction.name}` : `Raid repoussé : ${faction.name}`,
         `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notoriété ${st.notoriety}.${raidLoot}`,
         now,
         { resources: bounty, xp: faction.bounty.xp || undefined },
@@ -1021,7 +1023,8 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
   for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - (combat.attackerLosses[id] ?? 0) - (combat.attackerRecovered[id] ?? 0));
   const notifications: NewNotification[] = [...flushed.notifications];
   if (combat.outcome === "attacker_win") {
-    const reward = productionHours(player, faction.lair.rewardHours);
+    // 6.14.165 (S6, NJ-25) : compte jeune : au plus `startRewards.youngCapMinutes` de production, le reste en réserve du départ.
+    const reward = productionReward(player, faction.lair.rewardHours, now);
     for (const r of RARE) reward[r] = (reward[r] ?? 0) + faction.lair.rare;
     // v5.14 : le Corsaire en poste grossit le butin du repaire.
     const loot = 1 + playerModifiers(player).loot;

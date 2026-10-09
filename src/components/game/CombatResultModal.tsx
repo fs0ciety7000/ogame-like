@@ -19,7 +19,7 @@ import { CombatLossTable, CombatReportDetail } from "@/components/game/CombatRep
 import { closeCombatResult, useCombatModalStore, type CombatDisplay } from "@/store/combatModalStore";
 import { findUnit } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, frDeParts } from "@/lib/utils";
 import type { CombatLog, CombatOutcome } from "@/types/game";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { useExclusiveModal } from "@/store/modalSlotStore";
@@ -118,7 +118,9 @@ export function CombatResultModal() {
           ) : (
             <>
           <p className="mt-1 text-sm text-slate-400">
-            {current.perspective === "attacker" ? "Contre" : "Attaque de"} <strong className="text-slate-200">{current.opponentPseudo}</strong>
+            {/* 6.14.165 (S6, NJ-29) : « Attaque du Silencieux (…) » (avant : « Attaque de Le Silencieux »). */}
+            {current.perspective === "attacker" ? "Contre " : `Attaque ${frDeParts(current.opponentPseudo)[0]}`}
+            <strong className="text-slate-200">{current.perspective === "attacker" ? current.opponentPseudo : frDeParts(current.opponentPseudo)[1]}</strong>
           </p>
           <p className="text-xs text-slate-500">
             Ta puissance : {formatNumber(current.myPower)} — Puissance adverse : {formatNumber(current.opponentPower)}

@@ -57,6 +57,8 @@ export const GAME_FIELDS = [
   // 6.14.142 (PB-L1) : choix des paliers de bâtiments ; 6.14.143 (PB-L2) : tampon de l'entrepôt.
   "buildingChoices",
   "storageBuffer",
+  // 6.14.165 (S6, NJ-25) : réserve du départ (récompenses en heures retenues pour un compte jeune).
+  "startReserve",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"] as const;

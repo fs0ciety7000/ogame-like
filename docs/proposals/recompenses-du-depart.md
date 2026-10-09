@@ -1,6 +1,8 @@
 # Proposition : récompenses du départ (première heure, premier jour)
 
-Statut : **livrée** (2026-10-09, lot S3 du [plan](../plan.md), fiche `docs/changes/6.14.163-recompenses-du-depart.md`).
+Statut : **livrée** (2026-10-09, lot S3 du [plan](../plan.md), fiche `docs/changes/6.14.163-recompenses-du-depart.md` ; suite
+livrée en 6.14.165, lot S6 : plafond « compte jeune » de toutes les récompenses en heures (§9) et surplus de nano et de données,
+RR-2 (§10), fiche `docs/changes/6.14.165-depart-suite.md`).
 Méthode : `docs/WORKFLOW.md` §2. Constats NJ-4 et NJ-5 de [l'audit du parcours](../audit/2026-10-09-parcours-nouveau-joueur.md).
 Suite de [`rythme-du-depart.md`](rythme-du-depart.md) (6.14.159 : premiers niveaux en secondes). Questions : Q408 à Q411 (§8),
 option la plus prudente appliquée (règle n° 3).
@@ -44,7 +46,7 @@ Moments : ceux du parcours joué ; production du simulateur (`progression-sim.mj
 | Succès bronze et argent | 1re heure | XP seulement (0 h) | — | — |
 | Succès or | jours | 2 h de production | — | 2 h |
 | Chroniques (épisodes du mois) | 1er jour | octobre : sans ressources ; mois générés : 1 à 12 h de production par récompense | — | objectifs hors de portée de la 1re heure |
-| Passe | — | réservé aux détenteurs du passe | — | — |
+| Passe | 15e min (palier 1, payé à la 24e par « Tout réclamer ») | **2 h de production** (palier 1), puis 3, 4, 4, 5… h | 54 à 58/s | **120 min** : faux ici en 6.14.163, corrigé au §9 (NJ-25) |
 
 Coût des niveaux (après 6.14.159, extracteurs et entrepôt du premier palier) :
 
@@ -172,7 +174,8 @@ personnalisé garde ses factions (la prime du raid d'initiation ne lit pas `boun
 | Lot | Contenu | Taille | État |
 |:--|:--|:--|:--|
 | RR-1 | Prime du raid d'initiation indexée, Carnet plafonné et réglable (`startRewards`, `guideRewards`, `guideAmber`), simulateur (`startRewards`, `--recompenses`), docs | S | livré (6.14.163) |
-| RR-2 | Surplus de nano et de données (NJ-5, reste) : échange direct au comptoir ou conseil « Échange ton surplus » (option E), selon Q410 | S à M | avec S4 ou après S5 (nouveau parcours joué) |
+| RR-2 | Surplus de nano et de données (NJ-5, reste) : échange direct au comptoir ou conseil « Échange ton surplus » (option E), selon Q410 | S à M | livré (6.14.165, §10) |
+| RR-3 | Plafond « compte jeune » de toute récompense en heures de production, réserve du départ (NJ-25) | S | livré (6.14.165, §9) |
 
 ## 8. Questions (option recommandée appliquée, règle n° 3)
 
@@ -181,4 +184,97 @@ personnalisé garde ses factions (la prime du raid d'initiation ne lit pas `boun
 | Q408 | Prime du raid d'initiation : 30 / 15 / 5 / 5 min, ou plus (60 / 30 / 10 / 10) ? | **30 / 15 / 5 / 5** : un niveau de chaque extracteur, l'événement reste marquant sans sauter de niveaux | 60 / 30 / 10 / 10 : deux niveaux d'un extracteur | `startRewards.tutorialRaidMinutes` ; `enabled` décoché : 4 h |
 | Q409 | Carnet : plafond de 60 min par ressource, ou montants fixes divisés ? | **plafond de 60 min** : juste pour tous les rythmes ; un joueur avancé reçoit le montant réglé | montants fixes ÷ 10 (trop peu plus tard) | `startRewards.guideCapMinutes` (0 : montants fixes) ; montants dans `guideRewards` |
 | Q410 | Surplus de nano et de données (NJ-5) : échange direct commune ↔ commune au comptoir (taxe 30 %), conseil « surplus », ou nano et données dans les coûts des extracteurs ? | **reporté (RR-2)** : ce lot retire la part des primes (216 000 de chaque) ; on mesure le surplus restant au parcours S5 avant de toucher au comptoir ou aux coûts | coûts des extracteurs (équilibre de tous les comptes, I29) | — |
-| Q411 | Plafonner aussi, pour un compte de moins de 24 h, les autres récompenses en heures (succès or 2 h, Chroniques et passe jusqu'à 12 h) ? | **non** : aucune n'est à portée de la première heure (vérifié §2.1) | plafond général « compte neuf » | — |
+| Q411 | Plafonner aussi, pour un compte de moins de 24 h, les autres récompenses en heures (succès or 2 h, Chroniques et passe jusqu'à 12 h) ? | ~~non : aucune n'est à portée de la première heure~~ **faux** : le palier 1 du passe (2 h) se paie à la 24e minute (NJ-25, second parcours). Remplacé par le §9 (6.14.165) : toutes plafonnées | plafond général « compte neuf » (appliqué) | `startRewards.youngAccountHours` à 0 |
+
+## 9. Suite (6.14.165, lot S6, NJ-25) : toute récompense en heures, plafonnée pour un compte jeune
+
+### 9.1 Constat
+
+Second parcours joué (6.14.164, 45 min) : le palier 1 du passe, « 2 h de production », est atteint à la 15e minute et payé à la 24e
+par « Tout réclamer » : **388 800 ferraille, 208 800 énergie, 208 800 nanocomposants, 115 200 données** (921 600) pour ≈ 58/s. C'est le
+saut que 6.14.163 avait retiré au raid d'initiation, par une autre porte. Q411 affirmait qu'aucune autre récompense en heures n'était
+à portée de la première heure : c'est faux (le §2.1 classait le passe « réservé aux détenteurs » ; il est gratuit pour tous).
+
+### 9.2 Inventaire des récompenses exprimées en heures de production
+
+| Source | Heures | Atteignable par un compte de moins de 24 h ? | Traitement 6.14.165 |
+|:--|:--|:--|:--|
+| Passe, paliers (`grantPassReward`) | 2, 3, 4, 4, 5… 12 | **oui** (palier 1 à la 15e minute) | plafonné, reste en réserve |
+| Chroniques, épisodes et chapitres (même fonction) | 1 à 12 (mois générés) | oui (épisodes du mois dès le 1er jour) | plafonné, reste en réserve |
+| Succès (`achievementReward`) | or 2, légendaire 6, mythique 12 | peu probable (or) | plafonné, reste en réserve |
+| Série, jours 1 à 6 (`streakReward`) | 1 ; 1,5 ; 2… | **oui** : jour 2 à minuit (heure de Paris), 30 min après une inscription à 23 h 30 | plafonné (plancher 2 000 gardé), reste en réserve |
+| Série, coffre du 7e jour (`rollStreakChest`) | 6 à 18 | non : 6 jours de série au moins ; `youngAccountHours` est borné à 72 h | hors d'atteinte (garde du test) |
+| Défi hebdomadaire (`grantChallengeReward`) | 6 à 10 | possible (défi clos le lendemain de l'inscription) | plafonné, reste en réserve (le serveur passe `now`) |
+| Coalition, boss d'alliance, Léviathan | 2 à 4, podium plus | possible (alliance dès la 27e minute) | plafonnés, reste en réserve |
+| Repaires, primes des factions (raids ordinaires) | 4 à 24 | non (raids après 72 h) ; plafonnés quand même | plafonnés, reste en réserve |
+| Expéditions : gisement, butin de victoire | 1 à 3, 2 | possible (5 vaisseaux suffisent) | plafonnés, reste en réserve ; trésor rare : heures plafonnées, sans réserve |
+| Fin de saison (`performSeasonReward`) | selon le rang | possible (inscription la veille de la fin du mois) | part commune plafonnée, reste en réserve |
+| Raid d'initiation, Carnet | minutes, plafond de 60 min (6.14.163) | oui | inchangés (§5) |
+| Objectifs du jour, missions du jour, prise en main | rares, XP, jetons, montants fixes ≤ 60 min | oui | sans objet (pas en heures) |
+| Trésor et guerre d'alliance, coûts (traités, repaires, officiers, capsules, boucliers) | — | — | pas une récompense du joueur |
+
+### 9.3 Options
+
+| Option | Pour | Contre |
+|:--|:--|:--|
+| A. Âge du compte (retenue) : moins de `youngAccountHours` (24 h), une récompense en heures vaut au plus `youngCapMinutes` (60) de production au versement | une date (`createdAtMs`) que le serveur a déjà, aucune mesure à régler, couvre la première journée entière | un compte rapide reçoit moins le premier jour (rattrapé par la réserve) |
+| B. Seuil de production (tant que la production est sous N/s) | suit le joueur, pas l'horloge | seuil à régler et à revoir à chaque changement des extracteurs ; un joueur peut rester sous le seuil des jours |
+| C. Paliers du passe réécrits en minutes | simple pour le passe | ne règle ni les Chroniques, ni la série, ni les succès ; change le passe de tous |
+
+**Reste versé plus tard** : la différence (en montants, calculée au versement) va à la **réserve du départ** (`startReserve`, profil
+joueur), versée par « Tout réclamer » (action `startReserveClaim`, ligne des Ordres du jour) dès que le compte a `youngAccountHours`.
+Rien n'est perdu ; la réserve arrive quand la production l'a rattrapée (palier 1 du passe : 1 h à 58/s, soit ≈ 10 min de la production
+du lendemain). Le trésor rare d'expédition (rares) est plafonné sans réserve.
+
+### 9.4 Chiffres (`node scripts/progression-sim.mjs --base anciennes-recompenses --recompenses --depart`)
+
+| Récompense | Avant | Après |
+|:--|:--|:--|
+| Palier 1 du passe (2 h, 24e min, 32/s simulé) | 230 400 de chaque (120 min) | 115 200 de chaque (60 min) ; 115 200 de chaque en réserve |
+| Parcours joué (58/s) | 921 600 au total | ≈ 460 800, autant en réserve |
+
+Première heure simulée (avec les récompenses du départ, palier 1 du passe compris) : 60e minute à 7/7/7/7, entrepôt 4, 113 lancements
+(anciennes valeurs : 7/7/7/7, entrepôt 4, 118). Même plafonné, 60 min de production à la 24e minute avancent encore les extracteurs :
+6/6/6/6 et entrepôt 3 à la 45e minute, 7/7/7/7 et entrepôt 4 à la 60e, contre 5/5/5/5 et entrepôt 2 sans le passe (mesure de
+6.14.163, §5.2) : question Q416 (plafond de 30 min ?).
+
+### 9.5 Règles et invariant
+
+`startRewards.youngAccountHours` (24, de 0 à 72) et `startRewards.youngCapMinutes` (60). I50 étendu : `recompensesDepart.test.ts`
+(palier 1 du passe, succès or, série du jour 2, comptes sans date ou règles décochées, garde qui classe chaque appel de
+`productionHours(` du moteur : récompense plafonnée, ou coût et mesure).
+
+## 10. RR-2 (6.14.165) : surplus de nanocomposants et de données (NJ-26, Q410)
+
+### 10.1 Constat et diagnostic
+
+Second parcours : à 45 min, 309 k de nanocomposants et 205 k de données dorment (≈ 100 k de chaque sans le palier du passe) pendant
+que la ferraille (13 k) et, de la 18e à la 24e minute, l'énergie (495) bloquent. Les quatre extracteurs produisent autant, les
+chantiers du début coûtent surtout de la ferraille (§2.2). Le comptoir **acceptait déjà** l'échange commune ↔ commune à 1 pour 1 (taxe
+5 %, `getTradeRate` depuis 6.9.7, testé), mais la page disait « aucun échange commune ↔ commune » et rien ne le proposait.
+
+### 10.2 Options
+
+| Option | Effet | Coût | Risque |
+|:--|:--|:--|:--|
+| A. Échange direct au comptoir, taux affiché (**retenue**, avec D) | le surplus redevient de la ferraille ou de l'énergie en un geste | aucun : l'échange existe ; taux rendu réglable (`exchange.commonToCommon`, `rareToRare`) et dit sur la page | un joueur qui échange tout, toute la partie, avance (voir 10.3) |
+| B. Nano et données dans les coûts des premiers niveaux | structurel | change l'équilibre de tous les comptes, le pillage, I29 | proposition à part |
+| C. Production de départ différenciée (nano et données plus lents) | moins de surplus et de primes en nano | change toute l'économie (les primes indexées suivent) | idem |
+| D. Conseil « Échange ton surplus » (**retenu**, avec A) | « Que faire maintenant ? » propose l'échange quand la ressource la plus fournie en a ≥ 4 fois la plus maigre et ≥ 20 000, avec la quantité qui égalise les deux stocks, lien prérempli | 3 réglages (`surplusAdviceRatio`, `surplusAdviceMin`, `surplusAdviceDays`) | aucun |
+
+### 10.3 Chiffres (`node scripts/progression-sim.mjs --recompenses --depart --surplus`)
+
+Option `surplusExchange` du simulateur : quand seules des communes manquent au chantier ou à la recherche la moins chère, le joueur
+échange ses communes en trop (taux et taxe du comptoir).
+
+| Mesure | Sans échange | Avec échange (3 premiers jours) |
+|:--|:--|:--|
+| Première heure, 60e minute | 7/7/7/7, entrepôt 4, 113 lancements | 7/7/7/7, entrepôt 4, 120 lancements |
+| Première heure, 15e à 25e minute | 4/4/4/4 → 5/5/5/5 | 5/4/4/4 → 6/6/5/5 (ferraille et énergie d'abord) |
+| Stocks à 60 min (ferraille / énergie / nano / données) | 145 k / 174 k / 179 k / 194 k | 15 k / 11 k / 11 k / 11 k (504 k échangés depuis l'inscription) |
+| I29 avant la bascule (1re Ascension actif / moyen / occasionnel / quotidien) | J11 / J17,8 / J46,3 / J32,3 | J10,8 / J17,8 / J46,3 / J32,3 |
+| I29 après la bascule (365 j) | actif J93 ; sessions bloquées 2,9 % | actif J90,4 ; 4,2 % ; autres profils inchangés |
+
+Échanger **tout le surplus toute la partie** avance la 1re Ascension du profil moyen de J17,8 à **J14,8**, sous la borne d'I29 (J15) :
+le conseil ne s'affiche donc que les `surplusAdviceDays` (3) premiers jours, et le simulateur n'échange que ces jours-là. Le taux reste
+1 pour 1 (comptes existants inchangés) ; le baisser est la question Q417.

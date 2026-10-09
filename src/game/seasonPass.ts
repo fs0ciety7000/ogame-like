@@ -6,7 +6,7 @@ import { addDossiers, findCommander, unlockSeasonCommander } from "@/game/comman
 import type { ChronicleObjective } from "@/game/chronicles";
 import { objectiveLabel, staticObjectiveLabels, type StaticObjective } from "@/game/trackedActions";
 import { bountyState } from "@/game/bounties";
-import { productionHours } from "@/game/pirates";
+import { productionReward, youngRewardHours } from "@/game/startRewards";
 import { addRelic, rollRelic, relicLabel, type RelicRarity } from "@/game/relics";
 import { CAPSULES, SYNTH_RULES, synthesisState, type CapsuleType } from "@/game/synthesis";
 import { currentSeasonId, seasonLabel } from "@/game/seasons";
@@ -579,8 +579,11 @@ const RARITY_LABELS: Record<RelicRarity, string> = { common: "commune", rare: "r
 /** Applique une récompense de passe (paliers, épisodes et chapitres). Renvoie son libellé. */
 export function grantPassReward(player: PlayerState, r: PassReward, seasonId: string, now: number, random: () => number = Math.random, amberSource: AmberSource = "pass"): string {
   if (r.kind === "production") {
-    for (const [res, n] of Object.entries(productionHours(player, r.hours)) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
-    return describePassReward(r);
+    // 6.14.165 (S6, NJ-25) : compte jeune : au plus `startRewards.youngCapMinutes` de production, le reste en réserve du départ.
+    const paid = productionReward(player, r.hours, now);
+    for (const [res, n] of Object.entries(paid) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
+    const capped = youngRewardHours(player, r.hours, now);
+    return capped < r.hours ? `${describePassReward({ kind: "production", hours: capped })} (le reste en réserve du départ)` : describePassReward(r);
   }
   if (r.kind === "amber") {
     const b = bountyState(player);

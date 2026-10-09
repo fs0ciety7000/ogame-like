@@ -1,5 +1,6 @@
 import { nextLeviathanStart } from "@/game/leviathan";
 import { productionHours } from "@/game/pirates";
+import { productionReward } from "@/game/startRewards";
 import { RESOURCE_LIST } from "@/game/resources";
 import { GameActionError } from "@/game/errors";
 import type { PlayerState, ResourceId } from "@/types/game";
@@ -170,12 +171,13 @@ export function challengeRewardees(ch: Challenge): string[] {
 }
 
 /** Récompense d'un participant (appliquée à `player`), et titre pour le meilleur. */
-export function grantChallengeReward(ch: Challenge, player: PlayerState, opts: { title?: boolean; resources?: boolean } = {}): Partial<Record<ResourceId, number>> {
+/** 6.14.165 (S6, NJ-25) : `now` : un compte jeune reçoit au plus `startRewards.youngCapMinutes` de production, le reste en réserve. */
+export function grantChallengeReward(ch: Challenge, player: PlayerState, opts: { title?: boolean; resources?: boolean; now?: number } = {}): Partial<Record<ResourceId, number>> {
   const tier = challengeTier(ch);
   if (!tier || !challengeRewardees(ch).includes(player.uid)) return {};
   const gain: Partial<Record<ResourceId, number>> = {};
   if (opts.resources !== false) {
-    Object.assign(gain, productionHours(player, tier.hours));
+    Object.assign(gain, opts.now === undefined ? productionHours(player, tier.hours) : productionReward(player, tier.hours, opts.now));
     for (const r of RESOURCE_LIST) if (r.rarity === "rare") gain[r.id] = (gain[r.id] ?? 0) + tier.rare;
     for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
   }
@@ -194,11 +196,11 @@ export function challengeClaimable(ch: Challenge | null | undefined, uid: string
 }
 
 /** Réclamation : crédite les ressources (pas le titre, remis à la clôture) et note le joueur. */
-export function claimChallengeReward(ch: Challenge | null, player: PlayerState): { challenge: Challenge; gain: Partial<Record<ResourceId, number>> } {
+export function claimChallengeReward(ch: Challenge | null, player: PlayerState, now?: number): { challenge: Challenge; gain: Partial<Record<ResourceId, number>> } {
   if (!ch || ch.status !== "done") throw new GameActionError("Aucun défi terminé à récupérer.");
   if ((ch.claimed ?? []).includes(player.uid)) throw new GameActionError("Récompense déjà récupérée.");
   if (!challengeClaimable(ch, player.uid)) throw new GameActionError("Pas de récompense pour toi sur ce défi.");
-  const gain = grantChallengeReward(ch, player, { title: false });
+  const gain = grantChallengeReward(ch, player, { title: false, now });
   return { challenge: { ...ch, claimed: [...(ch.claimed ?? []), player.uid] }, gain };
 }
 

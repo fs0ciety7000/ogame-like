@@ -4,7 +4,7 @@
 | Système | Rythme | Chiffres |
 |:--|:--|:--|
 | Bâtiments (départ, 6.14.159) | continu | niveau 2 en **20 s**, niveau 5 en **3 min**, niveau 10 en 1 h 30 (extracteurs) ; ×2 environ par niveau, jonction ×4 avec le second palier (36 h après la bascule) ; nouveau compte : 4 extracteurs au niveau 4 en 5 min ; I49, `docs/proposals/rythme-du-depart.md` |
-| Récompenses du départ (6.14.163) | une fois | raid d'initiation repoussé : **30 / 15 / 5 / 5 min** de production (ferraille, énergie, nano, données ; au moins 1 000), au lieu de 4 h de chaque ; Carnet du commandant : chaque ressource commune ≤ **60 min** de production (au moins 5 000), montants réglables ; prise en main inchangée ; I50, `docs/proposals/recompenses-du-depart.md` |
+| Récompenses du départ (6.14.163) | une fois | raid d'initiation repoussé : **30 / 15 / 5 / 5 min** de production (ferraille, énergie, nano, données ; au moins 1 000), au lieu de 4 h de chaque ; Carnet du commandant : chaque ressource commune ≤ **60 min** de production (au moins 5 000), montants réglables ; prise en main inchangée ; 6.14.165 : toute récompense en heures d'un compte de moins de 24 h ≤ **60 min**, reste en réserve du départ ; I50, `docs/proposals/recompenses-du-depart.md` |
 | XP et rangs | continu | 28 rangs, de Fer III (100) à Élite (420 000) ; paliers d'XP par source (plein tarif, demi, quart) ; jeu actif ×1,25 à ×1,5 |
 | Saisons | mensuel | champion 200 Ambre + 50 jetons ; podium ; participation 35 Ambre |
 | Divisions (ligues) | hebdo | 6 divisions Bronze → Mythique, 20 % montent, 20 % descendent |
@@ -290,3 +290,10 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
 - Simulateur : option `startRewards` (`node scripts/progression-sim.mjs --base anciennes-recompenses --recompenses --depart`) ; à 60 min,
   extracteurs 5/5/5/5 au lieu de 7/7/7/7 ; I29 inchangé. Proposition : `docs/proposals/recompenses-du-depart.md` ;
   fiche : `docs/changes/6.14.163-recompenses-du-depart.md`.
+
+## 6.14.165 (lot S6, NJ-25) : compte jeune
+- Toute récompense exprimée en heures de production (passe et Chroniques, succès, série, défi, coalition, boss d'alliance, Léviathan,
+  repaires, primes, expéditions, fin de saison) reçue par un compte de moins de `startRewards.youngAccountHours` (24 h) vaut au plus
+  `startRewards.youngCapMinutes` (60) de production au versement. La différence va à la **réserve du départ** (`startReserve`), versée
+  par « Tout réclamer » dès 24 h (ligne des Ordres du jour). Palier 1 du passe au parcours joué : 921 600 → ≈ 460 800, autant en
+  réserve. Invariant I50 étendu ; proposition §9 ; fiche `docs/changes/6.14.165-depart-suite.md`.

@@ -9,6 +9,7 @@ import { BOSS_REMINDERS, bossWindows, EVENT_RULES, parisOffsetMs, type BossSched
 import { findWorldBoss, WORLD_BOSS_RULES, weekOfLocal, worldBossOfWeek, type WorldBossDef } from "@/game/worldBosses";
 import { formationEffects } from "@/game/formations";
 import { productionHours } from "@/game/pirates";
+import { productionReward } from "@/game/startRewards";
 import { bumpStat } from "@/game/stats";
 import { bountyState } from "@/game/bounties";
 import { findUnit, OFFENSIVE_UNITS, unitBaseCostTotal, unitsWithRole } from "@/game/units";
@@ -508,9 +509,10 @@ export function rewardHours(state: LeviathanState, uid: string): number {
 }
 
 /** Verse la récompense d'un participant (et le titre au premier). */
-export function grantLeviathanReward(state: LeviathanState, player: PlayerState, random: () => number = Math.random): { gain: Partial<Record<ResourceId, number>>; title: boolean; relic?: string; amber?: number } {
+/** 6.14.165 (S6, NJ-25) : `now` : un compte jeune reçoit au plus `startRewards.youngCapMinutes` de production, le reste en réserve. */
+export function grantLeviathanReward(state: LeviathanState, player: PlayerState, random: () => number = Math.random, now?: number): { gain: Partial<Record<ResourceId, number>>; title: boolean; relic?: string; amber?: number } {
   const hours = rewardHours(state, player.uid);
-  const gain = hours > 0 ? productionHours(player, hours) : {};
+  const gain = hours > 0 ? (now === undefined ? productionHours(player, hours) : productionReward(player, hours, now)) : {};
   for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
   if (state.status === "killed" && hours > 0) {
     bumpStat(player, "leviathanKills");

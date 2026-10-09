@@ -16,6 +16,7 @@ import { ascend } from "@/game/ascension";
 import { buildColonyDefense, renameColony, setColonyRoute, setColonySpec, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
 import { claimGuideStep, setGuideHidden } from "@/game/advancedGuide";
+import { claimStartReserve } from "@/game/startRewards";
 import { CLAIM_LABELS, describeClaims, pendingClaims, type ClaimAllAction, type ClaimContext } from "@/game/claimAll";
 import { claimCodexCategoryLocal, claimCodexTitleLocal, type CodexContext } from "@/game/codex";
 import { challengeTierIndex, claimChallengeReward } from "@/game/challenges";
@@ -33,7 +34,7 @@ import {
 } from "@/game/buildings";
 import { flushState, grantNewAchievements, type NewNotification } from "@/game/flush";
 import { challengeTokens, claimDailyTokens, grantTokens, playerCasino, tokensLabel } from "@/game/casino";
-import { EXCHANGE_RULES, exchangeRareLeft, isCommonToRare, recordRareExchange, RESOURCE_LIST, tradeQuote } from "@/game/resources";
+import { EXCHANGE_RULES, exchangeRareLeft, getTradeRate, isCommonToRare, recordRareExchange, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { RESEARCH_RULES, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, ownedBlueprints, scaleUnitCost } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
@@ -137,6 +138,7 @@ export type GameAction =
   | { type: "talentLearn"; talentId: string }
   | { type: "talentReset" }
   | { type: "streakClaim" }
+  | { type: "startReserveClaim" }
   | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string; pinned?: string[]; planet?: Partial<import("@/game/planetLook").PlanetLook> } }
   | { type: "passClaim"; tier: number }
   | { type: "seenAnnouncements"; ids: string[] }
@@ -375,6 +377,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const { sellId, buyId } = action;
       if (!RESOURCE_IDS.has(sellId) || !RESOURCE_IDS.has(buyId) || sellId === buyId) throw new GameActionError("Échange invalide.");
       const amount = positiveInt(action.amount, "Montant");
+      // 6.14.165 (RR-2) : un taux réglé à 0 ferme ce sens d'échange.
+      if (!(getTradeRate(sellId, buyId) > 0)) throw new GameActionError("Cet échange est fermé au comptoir.");
       if ((player.resources[sellId] ?? 0) < amount) throw new GameActionError("Pas assez de ressources à échanger.");
       // 5.26.1 : taxe sur ce qui est reçu, versée au pot commun par le serveur.
       // 6.14.143 (PB-L2) : Négoce (palier 15 de l'entrepôt) : taxe du comptoir réduite.
@@ -441,7 +445,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "challengeClaim": {
       const c = s.claims?.challenge;
       if (!c) throw new GameActionError("Défi indisponible : recharge la page.");
-      const res = claimChallengeReward(c.claimed ?? c.previous, player);
+      const res = claimChallengeReward(c.claimed ?? c.previous, player, now);
       const tokens = s.claims?.casino ? grantTokens(player, challengeTokens(s.claims.casino, challengeTierIndex(res.challenge))) : 0;
       c.claimed = res.challenge;
       return { gain: res.gain, tokens };
@@ -650,6 +654,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "streakClaim":
       return claimStreak(player, now);
 
+    // 6.14.165 (S6, NJ-25) : réserve du départ (récompenses en heures retenues tant que le compte était jeune).
+    case "startReserveClaim":
+      return { gained: claimStartReserve(player, now) };
+
     case "passClaim":
       return { gained: claimPassTier(player, action.tier, now) };
 
@@ -736,6 +744,7 @@ const CLAIM_NOTE_TITLES: Record<ClaimAllAction["type"], string> = {
   casinoDaily: "Jeton du jour du casino récupéré",
   challengeClaim: "Récompense du défi récupérée",
   codexTitle: "Titre du Codex reçu",
+  startReserveClaim: "Réserve du départ versée",
 };
 
 interface WalletSnapshot {

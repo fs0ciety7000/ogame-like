@@ -22,6 +22,7 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q401 | **Après la bascule** : plus de saut 1 h 30 → 36 h au niveau 11 ; les niveaux 9 et 10 s'allongent (2 h 15, 9 h) (`docs/proposals/rythme-du-depart.md`) | montée régulière au lieu d'un mur | valider |
 | Q408 | **Raid d'initiation** : prime ramenée à environ 30 min de production (49 500 au lieu de 864 000) (`docs/proposals/recompenses-du-depart.md`) | la première heure garde son rythme ; raids suivants inchangés | valider |
 | Q409 | **Carnet du commandant** : récompenses plafonnées à 60 min de production (≈ 83 000 au lieu de 300 000 au 1er objectif) (`docs/proposals/recompenses-du-depart.md`) | pas de saut de plusieurs niveaux | valider |
+| Q415 | **Récompenses d'un compte jeune** : 60 min de production au plus pendant 24 h (passe compris), le reste en réserve versée ensuite (`docs/changes/6.14.165-depart-suite.md`) | plus de pluie de ressources la première heure, rien de perdu | valider |
 
 ## 3. Récit
 
@@ -45,7 +46,10 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q406 | Vue liste du Labo par défaut seulement sur téléphone (< 768 px) ; sur ordinateur, l'arbre reste par défaut (nœuds à 7 px de texte) (`docs/changes/6.14.162-labo-mobile.md`) | valider |
 | Q407 | Vue liste du Labo : « Verrouillées, à portée » ouvert, « Plus loin » replié par défaut (`docs/changes/6.14.162-labo-mobile.md`) | valider |
 | Q410 | Surplus de nanocomposants et de données (production égale, coûts surtout en ferraille) : reporté au lot RR-2, à mesurer au parcours S5 (`docs/proposals/recompenses-du-depart.md`) | valider |
-| Q411 | Autres récompenses en heures (succès d'or, Chroniques, passe) non plafonnées pour un compte de moins de 24 h : aucune n'est atteignable la première heure (`docs/proposals/recompenses-du-depart.md`) | valider |
 | Q412 | Labo dans la barre d'onglets du bas sur téléphone ? Rien n'est changé pour l'instant (barre issue de Q90) (`docs/changes/6.14.164-confort-debutant.md`) | valider |
 | Q413 | Histoires des Chroniques pour un compte neuf : aucune pendant 24 h, puis 10 min au moins entre deux (`newcomerNews.storyGapMinutes`) (`docs/changes/6.14.164-confort-debutant.md`) | valider |
 | Q414 | Coupures 502 et 504 vues par les joueurs : plus envoyées au rapport d'erreurs (bandeau seulement) (`docs/changes/6.14.164-confort-debutant.md`) | valider |
+| Q416 | Plafond du compte jeune à 60 min (le palier 1 du passe pousse encore les extracteurs à 7/7/7/7 à la 60e minute) ou 30 min (`docs/changes/6.14.165-depart-suite.md`) | valider |
+| Q417 | Échange commune ↔ commune au comptoir gardé à 1 pour 1 (taxe 5 %), conseil « Échange ton surplus » limité aux 3 premiers jours (I29 tenu) (`docs/changes/6.14.165-depart-suite.md`) | valider |
+| Q418 | Fins de chantier, recherche, unités et mission hors du chiffre de la cloche (un point les signale) (`docs/changes/6.14.165-depart-suite.md`) | valider |
+| Q419 | Réserve du départ versée en entier à 24 h plutôt que par tranches (`docs/changes/6.14.165-depart-suite.md`) | valider |

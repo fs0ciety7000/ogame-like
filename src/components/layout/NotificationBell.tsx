@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigg
 import { setBellOpen, useNotificationStore } from "@/store/notificationStore";
 import { markNotificationRead } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
-import { groupNotifications, inCategory, NOTIFICATION_CATEGORIES, notificationLink, type NotificationCategory } from "@/lib/notificationCategories";
+import { countsInBadge, groupNotifications, inCategory, NOTIFICATION_CATEGORIES, notificationLink, type NotificationCategory } from "@/lib/notificationCategories";
 import { cn } from "@/lib/utils";
 import { NotificationCard } from "@/components/game/NotificationCard";
 import { Pager, usePaged } from "@/components/ui/panel";
@@ -22,6 +22,8 @@ export function NotificationBell() {
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
+  // 6.14.165 (S6, NJ-30) : le chiffre ne compte que ce qui compte ; la routine (chantiers, recherches, missions) met un point.
+  const unreadImportant = useMemo(() => items.filter((n) => !n.read && countsInBadge(n.kind)).length, [items]);
   const hasUrgentUnread = useMemo(
     () => items.some((n) => !n.read && (n.kind === "combat-defender" || n.kind === "spy-detected")),
     [items],
@@ -66,15 +68,17 @@ export function NotificationBell() {
             "relative grid h-9 w-9 place-items-center text-slate-400 transition-colors hover:bg-cyan-glow/10 hover:text-cyan-glow pointer-coarse:h-11 pointer-coarse:w-11",
             hasUrgentUnread && "animate-pulse-alert",
           )}
-          aria-label="Notifications"
+          aria-label={unread > 0 ? `Notifications : ${unreadImportant} importante${unreadImportant > 1 ? "s" : ""}, ${unread} non lue${unread > 1 ? "s" : ""}` : "Notifications"}
         >
           <Bell className="h-4 w-4" />
-          {unread > 0 && (
+          {unreadImportant > 0 ? (
             // 6.14.86 (couleur = sens) : rouge seulement pour une menace non lue (attaque subie, espion détecté), neutre sinon.
             <span className={cn("absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center px-0.5 font-mono text-[11px] font-bold leading-none tabular-nums", hasUrgentUnread ? "bg-danger-glow text-space-950" : "border border-slate-400/60 bg-space-800 text-slate-100")}>
-              {unread > 9 ? "9+" : unread}
+              {unreadImportant > 9 ? "9+" : unreadImportant}
             </span>
-          )}
+          ) : unread > 0 ? (
+            <span aria-hidden className="absolute right-1.5 top-1.5 h-1.5 w-1.5 bg-slate-400" />
+          ) : null}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="flex max-h-[75vh] w-[min(26rem,calc(100vw-1rem))] flex-col">

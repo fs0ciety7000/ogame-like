@@ -33,12 +33,14 @@ export function ResourcesPage() {
   const rates = useProductionRates(player, resources);
   const uid = useAuthStore((s) => s.user?.uid);
 
-  const [sellId, setSellId] = useState<ResourceId>("scrap");
-  const [buyId, setBuyId] = useState<ResourceId>("reinforcedSteel");
-  const [amount, setAmount] = useState(100);
-  const [submitting, setSubmitting] = useState(false);
   // 6.14.161 (NJ-1) : « échange-la au comptoir » (raison d'un bouton grisé) mène ici, au comptoir (?onglet=comptoir).
+  // 6.14.165 (RR-2) : le conseil « Échange ton surplus » préremplit la paire et la quantité (?vendre=…&recevoir=…&quantite=…).
   const [params] = useSearchParams();
+  const known = (id: string | null): id is ResourceId => !!id && RESOURCE_LIST.some((r) => r.id === id);
+  const [sellId, setSellId] = useState<ResourceId>(() => (known(params.get("vendre")) ? (params.get("vendre") as ResourceId) : "scrap"));
+  const [buyId, setBuyId] = useState<ResourceId>(() => (known(params.get("recevoir")) ? (params.get("recevoir") as ResourceId) : "reinforcedSteel"));
+  const [amount, setAmount] = useState(() => Math.max(1, Math.floor(Number(params.get("quantite")) || 100)));
+  const [submitting, setSubmitting] = useState(false);
   const focus = params.get("onglet");
   const ready = !!resources && !!player;
   useEffect(() => {
@@ -148,7 +150,8 @@ export function ResourcesPage() {
         <CardContent className="flex flex-col gap-4">
           <p className="text-xs text-slate-500">
             Ressources communes → rares : <span className="font-mono tabular-nums">1</span> rare pour <span className="font-mono tabular-nums">{formatNumber(perRare)}</span> communes. Rares → communes :{" "}
-            <span className="font-mono tabular-nums">{formatDecimal(EXCHANGE_RULES.rareToCommon, 2)}</span> communes par rare. Aucun échange rare ↔ rare ou commune ↔ commune. Taxe de{" "}
+            <span className="font-mono tabular-nums">{formatDecimal(EXCHANGE_RULES.rareToCommon, 2)}</span> communes par rare. {/* 6.14.165 (RR-2) : taux réels, lus dans la règle. */}
+            {pairRateText("commune", EXCHANGE_RULES.commonToCommon)} {pairRateText("rare", EXCHANGE_RULES.rareToRare)} Taxe de{" "}
             <span className="font-mono tabular-nums">{formatDecimal(quote.taxPct * 100, 1)} %</span> sur ce que tu reçois, versée au pot commun du serveur
             {quote.taxPct < EXCHANGE_RULES.taxPct && <span className="text-mint-glow"> (Négoce de l'entrepôt)</span>}.
           </p>
@@ -211,6 +214,13 @@ export function ResourcesPage() {
       </Card>
     </div>
   );
+}
+
+/** 6.14.165 (RR-2) : « Commune ↔ commune : 1 pour 1. » ou « Aucun échange rare ↔ rare. » (taux lu dans la règle). */
+function pairRateText(kind: "commune" | "rare", rate: number): string {
+  if (!(rate > 0)) return `Aucun échange ${kind} ↔ ${kind}.`;
+  const label = kind === "commune" ? "Commune ↔ commune" : "Rare ↔ rare";
+  return rate === 1 ? `${label} : 1 pour 1.` : `${label} : ${formatDecimal(rate, 2)} pour 1.`;
 }
 
 /** 6.14.164 (S4, NJ-20) : plus petite quantité vendue qui rapporte au moins 1 (taxe comprise), même calcul que le serveur. */

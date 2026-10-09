@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Check, Gift, Lock, Star, Ticket } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { StatTile } from "@/components/ui/hud";
+import { HudCallout, StatTile } from "@/components/ui/hud";
+import { isYoungAccount, START_REWARD_RULES } from "@/game/startRewards";
+import { formatHours } from "@/game/format";
 import { ObjectiveGoLink } from "@/components/game/ObjectiveGoLink";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { activePass, describePassReward, isCumulativePass, objectiveLabel, PASS_POINTS, passBonusProgress, passPrestigeProgress, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
@@ -144,6 +146,14 @@ export function SeasonPassPage() {
         <StatTile label="Points" value={`${st.points} / ${max}`} sub="≈ 40 points par jour d'activité" tone="gold" />
         <StatTile label="Fin de la saison" value={formatClock(Math.max(0, Math.floor((endOfMonth(now) - now) / 1000)))} sub="Les paliers non réclamés sont perdus" tone="ember" />
       </div>
+      {/* 6.14.165 (S6, NJ-25) : compte jeune : les récompenses en heures sont plafonnées, le reste attend dans la réserve du départ. */}
+      {isYoungAccount(player, now) && (
+        <HudCallout tone="accent" className="text-xs">
+          Premières {formatHours(START_REWARD_RULES.youngAccountHours)} : une récompense « h de production » te verse au plus{" "}
+          <span className="font-mono tabular-nums">{START_REWARD_RULES.youngCapMinutes}</span> min de ta production. Le reste t'attend dans la
+          réserve du départ (Ordres du jour), versée ensuite.
+        </HudCallout>
+      )}
       <div className="-mt-2 h-2 w-full overflow-hidden bg-white/5" role="progressbar" aria-label="Points du passe" aria-valuemin={0} aria-valuemax={max} aria-valuenow={st.points}>
         <div className="h-full bg-gradient-to-r from-cyan-glow via-violet-glow to-gold-glow transition-all" style={{ width: `${(st.points / max) * 100}%` }} />
       </div>

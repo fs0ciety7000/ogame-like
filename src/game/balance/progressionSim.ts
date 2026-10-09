@@ -11,7 +11,7 @@ import { MISSIONS } from "@/game/missions";
 import { ONBOARDING_STEPS } from "@/game/onboarding";
 import { GUIDE_STEPS, guideStepReward } from "@/game/advancedGuide";
 import { DEFAULT_FACTIONS, findFaction } from "@/game/pirates";
-import { START_REWARD_RULES, tutorialRaidBounty } from "@/game/startRewards";
+import { splitProductionReward, START_REWARD_RULES, tutorialRaidBounty } from "@/game/startRewards";
 import { TUTORIAL_RAID } from "@/game/story";
 import { PRESTIGE_RULES } from "@/game/prestige";
 import { getRank } from "@/game/ranks";
@@ -134,7 +134,10 @@ export interface ProgressionOptions {
   /** 6.14.163 (S3, proposals/recompenses-du-depart.md) : récompenses du départ hors prise en main, versées une fois : prime du
    *  raid d'initiation à `raidMinute` et objectif « dailyGoal » du Carnet à `guideMinute` (règles `startRewards` : indexées sur la
    *  production, ou anciennes valeurs si décochées). Absent : non simulées (repères d'I29 inchangés). */
-  startRewards?: { raidMinute: number; guideMinute: number };
+  startRewards?: { raidMinute: number; guideMinute: number; /** 6.14.165 (S6, NJ-25) : palier 1 du passe (2 h de production). */ passMinute?: number };
+  /** 6.14.165 (S6, NJ-26, RR-2) : le joueur échange ses ressources communes en trop au comptoir (commune → commune, taux
+   *  `exchange.commonToCommon`, taxe comprise) quand seule une commune manque pour le chantier ou la recherche la moins chère. */
+  surplusExchange?: boolean;
 }
 
 /** 6.14.159 (RD-1) : relevé des premières minutes (option `opening`). */
@@ -144,6 +147,10 @@ export interface ProgressionOpeningMark {
   storageLevel: number;
   /** Chantiers lancés depuis l'inscription. */
   launched: number;
+  /** 6.14.165 (RR-2) : stocks des ressources communes (ferraille, énergie, nano, données) au relevé. */
+  stocks: number[];
+  /** 6.14.165 (RR-2) : communes vendues au comptoir (commune → commune) depuis l'inscription. */
+  swapped: number;
 }
 
 export interface AscensionGateContext {
@@ -258,7 +265,7 @@ export interface ProgressionResult {
   /** 6.14.159 (RD-1) : relevés de l'option `opening` (vide sans elle). */
   opening: ProgressionOpeningMark[];
   /** 6.14.163 (S3) : récompenses du départ versées (option `startRewards`), et production commune par heure à ce moment. */
-  startRewardsPaid: { raid: Record<string, number>; raidPerHour: number; guide: Record<string, number>; guidePerHour: number };
+  startRewardsPaid: { raid: Record<string, number>; raidPerHour: number; guide: Record<string, number>; guidePerHour: number; pass: Record<string, number>; passPerHour: number; passDeferred: Record<string, number> };
 }
 
 type Cost = Record<string, number | undefined>;
@@ -307,7 +314,9 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
   let lastStreakDay = -2;
   let raidPaid = false;
   let guidePaid = false;
-  const startRewardsPaid: ProgressionResult["startRewardsPaid"] = { raid: {}, raidPerHour: 0, guide: {}, guidePerHour: 0 };
+  const startRewardsPaid: ProgressionResult["startRewardsPaid"] = { raid: {}, raidPerHour: 0, guide: {}, guidePerHour: 0, pass: {}, passPerHour: 0, passDeferred: {} };
+  let passPaid = false;
+  let swapped = 0;
   let objStreak = 0;
   let objDays = 0;
   let expToday = 0;
@@ -413,6 +422,31 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     exchangedRare += rareNeeded;
     return true;
   };
+  /** 6.14.165 (RR-2, option `surplusExchange`) : commune → commune au comptoir, quand seules des communes manquent. */
+  const tryCommonExchange = (c: Cost) => {
+    const rate = (Number(EXCHANGE_RULES.commonToCommon) || 0) * (1 - EXCHANGE_RULES.taxPct);
+    // Comme le conseil « Échange ton surplus » : les `surplusAdviceDays` premiers jours seulement (0 : toujours).
+    const days = Math.max(0, Number(EXCHANGE_RULES.surplusAdviceDays) || 0);
+    if (!options.surplusExchange || !(rate > 0) || (days > 0 && exchangeT >= days * DAY)) return false;
+    for (const [k, n] of Object.entries(c)) if (isRare(k) && (res[k] ?? 0) < (n ?? 0)) return false;
+    const need: Record<string, number> = {};
+    for (const k of COMMONS) {
+      const lack = (c[k] ?? 0) - (res[k] ?? 0);
+      if (lack > 0) need[k] = lack;
+    }
+    if (!Object.keys(need).length) return false;
+    const spare = (k: string) => (need[k] ? 0 : Math.max(0, (res[k] ?? 0) - (c[k] ?? 0)));
+    let sell = Object.values(need).reduce((a, b) => a + b, 0) / rate;
+    if (COMMONS.reduce((a, k) => a + spare(k), 0) < sell) return false;
+    for (const k of [...COMMONS].sort((a, b) => spare(b) - spare(a))) {
+      const take = Math.min(spare(k), sell);
+      res[k] -= take;
+      sell -= take;
+      swapped += take;
+    }
+    for (const [k, n] of Object.entries(need)) res[k] += n;
+    return true;
+  };
   let exchangeT = 0;
 
   for (let t = 0, step = baseStep; t < days * DAY; t += step) {
@@ -500,6 +534,17 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
         startRewardsPaid.guide = reward;
         const r = getProductionRatesPerSecond(buildings, tech);
         startRewardsPaid.guidePerHour = Math.round(COMMONS.reduce((a, k) => a + (r[k] ?? 0), 0) * HOUR);
+      }
+      // 6.14.165 (S6, NJ-25) : palier 1 du passe (2 h de production), plafonné pour un compte jeune (règles `startRewards`).
+      const pm = options.startRewards.passMinute;
+      if (pm !== undefined && !passPaid && t >= pm * 60) {
+        passPaid = true;
+        const split = splitProductionReward({ ...player(), createdAtMs: 1 }, 2, 1 + t * 1000);
+        add(split.paid as Cost, "passe", t);
+        startRewardsPaid.pass = split.paid as Record<string, number>;
+        startRewardsPaid.passDeferred = split.deferred as Record<string, number>;
+        const r = getProductionRatesPerSecond(buildings, tech);
+        startRewardsPaid.passPerHour = Math.round(COMMONS.reduce((a, k) => a + (r[k] ?? 0), 0) * HOUR);
       }
     }
 
@@ -604,7 +649,7 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
           cands.push({ id: b.id, cost: applyBuildingDiscount(buildingCost(b, (st.level ?? 0) + 1), discount) });
         }
         cands.sort((a, b) => value(a.cost) - value(b.cost));
-        const c = cands.find((x) => afford(x.cost)) ?? cands.find((x) => tryExchange(x.cost));
+        const c = cands.find((x) => afford(x.cost)) ?? cands.find((x) => tryExchange(x.cost)) ?? cands.find((x) => tryCommonExchange(x.cost));
         if (!c) break;
         pay(c.cost);
         again = true;
@@ -627,7 +672,7 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
             return { tt, cost: l ? (Object.fromEntries(Object.entries(cost).map(([k, n]) => [k, (n ?? 0) * l.costFactor])) as Cost) : cost };
           })
           .sort((a, b) => value(a.cost) - value(b.cost));
-        const c = cands.find((x) => afford(x.cost)) ?? cands.find((x) => tryExchange(x.cost));
+        const c = cands.find((x) => afford(x.cost)) ?? cands.find((x) => tryExchange(x.cost)) ?? cands.find((x) => tryCommonExchange(x.cost));
         if (!c) break;
         pay(c.cost);
         again = true;
@@ -688,7 +733,15 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     const minExtractor = Math.min(...EXTRACTORS.map((id) => effectiveBuildingLevel(buildings, id)));
     if (reachHours.l5 === null && minExtractor >= 5) reachHours.l5 = Math.round((end / HOUR) * 100) / 100;
     if (reachHours.l10 === null && minExtractor >= 10) reachHours.l10 = Math.round((end / HOUR) * 100) / 100;
-    if (openingMarks.has(end)) opening.push({ minute: end / 60, extractors: EXTRACTORS.map((id) => effectiveBuildingLevel(buildings, id)), storageLevel: effectiveBuildingLevel(buildings, "entrepot"), launched: openingLaunched });
+    if (openingMarks.has(end))
+      opening.push({
+        minute: end / 60,
+        extractors: EXTRACTORS.map((id) => effectiveBuildingLevel(buildings, id)),
+        storageLevel: effectiveBuildingLevel(buildings, "entrepot"),
+        launched: openingLaunched,
+        stocks: COMMONS.map((k) => Math.round(res[k] ?? 0)),
+        swapped: Math.round(swapped),
+      });
     if (end % DAY === 0) {
       // « Fini, sans suite » : bâtiments et arbre au maximum, files vides, aucune Ascension possible ce jour-là.
       const canAscendNow = !!options.ascend && ascensions < ASCENSION_RULES.maxAscensions && (lastAscensionT === null || end - lastAscensionT >= ASCENSION_RULES.cooldownDays * DAY);

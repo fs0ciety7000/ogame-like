@@ -54,7 +54,8 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     intro: [
       { speaker: "vashka", text: "Bien. Mais tes signaux ont été captés. La Confrérie du Vide flaire les jeunes empires comme le tien." },
       { speaker: "varan", text: "Une nouvelle colonie, toute neuve, toute brillante… Mes gars adorent les coffres qui n'ont jamais connu de serrure." },
-      { speaker: "vashka", text: "Mets ton stock à l'abri dans l'entrepôt et installe des roquettes. Quand Varan viendra, il faudra lui répondre." },
+      // 6.14.165 (S6, NJ-29) : l'alerte et le rapport nomment l'exécuteur de la Confrérie, le Silencieux : l'histoire le présente.
+      { speaker: "vashka", text: "Mets ton stock à l'abri dans l'entrepôt et installe des roquettes. Varan n'attaque jamais lui-même : il enverra le Silencieux, son exécuteur. Il faudra lui répondre." },
     ],
   },
   {
@@ -62,7 +63,7 @@ export const STORY_CHAPTERS: StoryChapter[] = [
     title: "Le Serment de la Traque",
     steps: ["spy", "alliance", "rank"],
     intro: [
-      { speaker: "vashka", text: "Varan a goûté à tes roquettes. Il reviendra plus fort : la Confrérie n'oublie jamais une humiliation." },
+      { speaker: "vashka", text: "Le Silencieux a goûté à tes roquettes. Varan le renverra plus fort : la Confrérie n'oublie jamais une humiliation." },
       { speaker: "vashka", text: "Apprends à voir avant de frapper : envoie une sonde. Puis trouve des alliés, on ne survit pas seul dans ce secteur." },
       { speaker: "vashka", text: "Atteins le rang Fer II, et l'Essaim te reconnaîtra comme l'un des siens." },
     ],

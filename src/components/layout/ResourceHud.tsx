@@ -40,7 +40,8 @@ export function ResourceHud() {
 
   // 6.14.116 (É30-5) : place réservée pendant le chargement (hauteurs mesurées : 78 px sur téléphone, 125 px de 640 à 767 px,
   // 89 px au-delà). Avant, la barre apparaissait d'un coup et poussait la page de 78 px (0,08 de CLS sur mobile).
-  if (!resources || !player) return <div aria-hidden className="h-[78px] sm:h-[125px] md:h-[89px]" />;
+  // 6.14.165 (S6, NJ-28) : sur téléphone, les rares ont leur ligne : 112 px avec une ligne de pastilles (148 avec deux).
+  if (!resources || !player) return <div aria-hidden className="h-[112px] sm:h-[125px] md:h-[89px]" />;
 
   const history = player.resourceHistory ?? [];
   const economy = economySnapshot({ ...player, resources }, Date.now());
@@ -146,7 +147,9 @@ export function ResourceHud() {
         );
       })}
       </div>
-      <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">
+      {/* 6.14.165 (S6, NJ-28) : plus de défilement caché à 375 px (la rangée mesurait 400 px, le Fragment d'IA était coupé) :
+          les pastilles passent à la ligne et, sur téléphone, les 4 ressources rares ont leur propre ligne en 4 colonnes. */}
+      <div className="flex flex-wrap items-center gap-1.5">
       {/* 5.24 : Ambre, monnaie premium : liseré doré, coin coupé, à part des ressources. */}
       {showAmber && (
       <Tooltip>
@@ -190,6 +193,7 @@ export function ResourceHud() {
       )}
 
 
+      <div className="grid w-full grid-cols-4 gap-1 sm:contents">
       {rare.map((res) => (
         // 6.14.164 (S4, NJ-7) : icône et nombre seulement : le nom s'affiche au toucher (avant : au survol seulement).
         <TapTooltip key={res.id}>
@@ -201,10 +205,10 @@ export function ResourceHud() {
               initial={pulse[res.id] ? { scale: 1.15 } : false}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 380, damping: 14 }}
-              className="flex items-center gap-1.5 border border-gold-glow/15 bg-gold-glow/[0.04] px-2 py-1 text-xs"
+              className="flex min-w-0 items-center gap-1 border border-gold-glow/15 bg-gold-glow/[0.04] px-1.5 py-1 text-xs sm:gap-1.5 sm:px-2"
             >
-              <ResourceIcon id={res.id} className="h-5 w-5" />
-              <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-slate-200" />
+              <ResourceIcon id={res.id} className="h-5 w-5 shrink-0" />
+              <AnimatedNumber value={resources[res.id]} format={formatCompact} className="truncate tabular-mono text-slate-200" />
             </motion.div>
           </TapTooltipTrigger>
           <TooltipContent>
@@ -220,6 +224,7 @@ export function ResourceHud() {
           </TooltipContent>
         </TapTooltip>
       ))}
+      </div>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { GameActionError } from "@/game/errors";
 import { describeGain } from "@/game/format";
 export { describeGain };
 import { formationEffects } from "@/game/formations";
+import { productionReward, youngRewardHours } from "@/game/startRewards";
 import { activeTreaty, FACTIONS, hasTreaty, pirateState, productionHours, setFactionState, TREATY_RULES } from "@/game/pirates";
 import { applyXpDelta } from "@/game/seasons";
 import { bumpStat } from "@/game/stats";
@@ -256,11 +257,12 @@ export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet,
   if (kind === "nothing") {
     text = "Calme plat : rien d'intéressant dans ce secteur.";
   } else if (kind === "deposit") {
-    const gain = deepen(fleet, productionHours(player, between(R.depositMinHours, R.depositMaxHours, random)));
+    // 6.14.165 (S6, NJ-25) : compte jeune : au plus `startRewards.youngCapMinutes` de production, le reste en réserve du départ.
+    const gain = deepen(fleet, productionReward(player, between(R.depositMinHours, R.depositMaxHours, random), now));
     addLoot(fleet, gain);
     text = `Gisement repéré et exploité : ${describeGain(gain)}.`;
   } else if (kind === "rare") {
-    const value = sum(productionHours(player, between(R.rareMinHours, R.rareMaxHours, random)));
+    const value = sum(productionHours(player, youngRewardHours(player, between(R.rareMinHours, R.rareMaxHours, random), now)));
     const each = Math.max(1, Math.floor(value / Math.max(1, R.rareRate) / 4));
     const gain = deepen(fleet, { reinforcedSteel: each, cyberModule: each, syntheticNanites: each, aiFragment: each });
     addLoot(fleet, gain);
@@ -283,7 +285,7 @@ export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet,
   } else if (kind === "ambush") {
     const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet), now);
     if (won) {
-      const gain = deepen(fleet, productionHours(player, R.victoryLootHours));
+      const gain = deepen(fleet, productionReward(player, R.victoryLootHours, now));
       addLoot(fleet, gain);
       text = `Embuscade repoussée (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Butin : ${describeGain(gain)}.`;
     } else if (expeditionDepth(fleet) > 0 && fleet.loot) {
@@ -338,7 +340,7 @@ export function resolveExpeditionChoice(player: PlayerState, fleet: ExpeditionFl
     const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random) * riskOf(fleet), now);
     if (st && faction) st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     if (won) {
-      const gain = deepen(fleet, productionHours(player, EXPEDITION_RULES.victoryLootHours));
+      const gain = deepen(fleet, productionReward(player, EXPEDITION_RULES.victoryLootHours, now));
       addLoot(fleet, gain);
       text = `Passage forcé face à ${name} (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Butin : ${describeGain(gain)}. Ta notoriété grimpe.`;
     } else {

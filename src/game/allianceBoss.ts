@@ -5,6 +5,7 @@ import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { FEED_MAX, leviathanRanking, type LeviathanState } from "@/game/leviathan";
 import { productionHours } from "@/game/pirates";
+import { productionReward } from "@/game/startRewards";
 import { addPassPoints } from "@/game/seasonPass";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { parisDay } from "@/game/retention";
@@ -214,7 +215,8 @@ export function grantAllianceBossReward(
   const bossId = allianceBossDef(state).id;
   const killed = player.stats?.allianceBossKilled ?? [];
   if (!killed.includes(bossId)) player.stats = { ...(player.stats ?? {}), allianceBossKilled: [...killed, bossId] };
-  const gain = productionHours(player, ALLIANCE_BOSS_RULES.rewardHours);
+  // 6.14.165 (S6, NJ-25) : compte jeune : au plus `startRewards.youngCapMinutes` de production, le reste en réserve du départ.
+  const gain = productionReward(player, ALLIANCE_BOSS_RULES.rewardHours, now);
   for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
   if (ranking[0]?.uid === player.uid) {
     const item = rollRelic("allianceBoss", now, random, "rare");

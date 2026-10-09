@@ -156,6 +156,9 @@ export interface PlayerState {
   buildingChoices?: import("@/game/buildingTiers").BuildingChoices | null;
   /** 6.14.143 (PB-L2) : tampon de l'entrepôt (palier 10), production gardée quand l'entrepôt est plein, par ressource commune. */
   storageBuffer?: Partial<Record<ResourceId, number>> | null;
+  /** 6.14.165 (S6, NJ-25) : réserve du départ, part des récompenses en heures retenue tant que le compte est jeune
+   *  (`startRewards.youngAccountHours`), versée par « Tout réclamer » ensuite (src/game/startRewards.ts). */
+  startReserve?: Partial<Record<ResourceId, number>> | null;
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;

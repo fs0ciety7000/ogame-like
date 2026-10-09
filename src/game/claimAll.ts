@@ -3,6 +3,7 @@ import { contractDay } from "@/game/contracts";
 import { onboardingEligible, onboardingProgress } from "@/game/onboarding";
 import { passState, passTier, tierRequirements } from "@/game/seasonPass";
 import { streakStatus } from "@/game/streak";
+import { startReserveReady } from "@/game/startRewards";
 import { dailyMissions } from "@/game/dailyMissions";
 import { chronicleOf, chronicleState, unlockedEpisodes } from "@/game/chronicles";
 import { codexClaimableCategories, codexTitleClaimable, type CodexContext } from "@/game/codex";
@@ -32,6 +33,7 @@ export type ClaimAllAction =
   | { type: "challengeClaim" }
   | { type: "codexTitle" }
   | { type: "streakClaim" }
+  | { type: "startReserveClaim" }
   | { type: "dailyClaim"; index: number }
   | { type: "chronicleClaim"; episode: number }
   | { type: "claimContract"; contractId: string }
@@ -55,6 +57,8 @@ export function pendingClaims(player: PlayerState, now: number, codex?: CodexCon
   if (ctx.challenge && player.uid && challengeClaimable(ctx.challenge.previous, player.uid)) out.push({ type: "challengeClaim" });
   // 5.30 : série du jour d'abord, puis missions du jour.
   if (!streakStatus(player, now).claimed) out.push({ type: "streakClaim" });
+  // 6.14.165 (S6, NJ-25) : réserve du départ, dès que le compte n'est plus jeune.
+  if (startReserveReady(player, now)) out.push({ type: "startReserveClaim" });
   dailyMissions(player, now).tasks.forEach((t, i) => {
     if (t.done && !t.claimed) out.push({ type: "dailyClaim", index: i });
   });
@@ -90,6 +94,7 @@ export const CLAIM_LABELS: Record<ClaimAllAction["type"], [string, string]> = {
   challengeClaim: ["récompense du défi", "récompenses du défi"],
   codexTitle: ["titre du Codex", "titres du Codex"],
   streakClaim: ["récompense de série", "récompenses de série"],
+  startReserveClaim: ["réserve du départ", "réserves du départ"],
   dailyClaim: ["mission du jour", "missions du jour"],
   chronicleClaim: ["épisode des Chroniques", "épisodes des Chroniques"],
   claimContract: ["objectif du jour", "objectifs du jour"],

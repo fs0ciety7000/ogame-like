@@ -208,6 +208,14 @@ const SCENARIOS: Record<string, Scenario> = {
     action: { type: "talentReset" },
   },
   streakClaim: { action: { type: "streakClaim" } },
+  // 6.14.165 (S6, NJ-25) : réserve du départ d'un compte qui n'est plus jeune.
+  startReserveClaim: {
+    prep: (p) => {
+      p.createdAtMs = NOW - 48 * 3_600_000;
+      p.startReserve = { scrap: 1_000, energy: 500 };
+    },
+    action: { type: "startReserveClaim" },
+  },
   passClaim: { prep: (p) => (p.seasonPass = { ...passState(p, NOW), points: 100_000 }), action: { type: "passClaim", tier: 1 } },
   chronicleClaim: {
     prep: (p) => (p.chronicle = { monthId: chronicleMonthId(NOW), progress: [999, 999, 999, 999], claimed: [], emblems: [], chapters: [] } as unknown as PlayerState["chronicle"]),

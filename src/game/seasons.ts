@@ -1,3 +1,4 @@
+import { productionReward } from "@/game/startRewards";
 import { recordXp, type XpSource } from "@/game/xpAudit";
 import { applyXpTiers } from "@/game/xpTiers";
 import { getProductionRatesPerSecond } from "@/game/production";
@@ -181,9 +182,12 @@ export function performSeasonReward(
   const player = flushed.player;
   const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
   const gained: Partial<Record<ResourceId, number>> = {};
+  // 6.14.165 (S6, NJ-25) : compte jeune : la part en heures des ressources communes vaut au plus `startRewards.youngCapMinutes`
+  // de production, le reste va à la réserve du départ.
+  const prod = productionReward(player, reward.hours, now);
   for (const r of RESOURCE_LIST) {
-    const amount =
-      Math.floor((rates[r.id] ?? 0) * reward.hours * 3600) + (r.rarity === "rare" ? reward.rare : 0) + (r.rarity === "common" ? Math.floor(reward.common ?? 0) : 0);
+    const hourly = r.rarity === "common" ? (prod[r.id] ?? 0) : Math.floor((rates[r.id] ?? 0) * reward.hours * 3600);
+    const amount = hourly + (r.rarity === "rare" ? reward.rare : 0) + (r.rarity === "common" ? Math.floor(reward.common ?? 0) : 0);
     if (amount <= 0) continue;
     gained[r.id] = amount;
     player.resources[r.id] = (player.resources[r.id] ?? 0) + amount;

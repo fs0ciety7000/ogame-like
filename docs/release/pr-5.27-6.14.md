@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.164 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.165 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 229 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 230 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -265,6 +265,7 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.162 : Labo en liste sur téléphone (S2) (`docs/changes/6.14.162-labo-mobile.md`)
 - 6.14.163 : Récompenses du départ à la mesure de la production (S3) (`docs/changes/6.14.163-recompenses-du-depart.md`)
 - 6.14.164 : Confort des premières heures (S4) (`docs/changes/6.14.164-confort-debutant.md`)
+- 6.14.165 : Première journée sans pluie de ressources, surplus échangeable (S6) (`docs/changes/6.14.165-depart-suite.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

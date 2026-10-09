@@ -70,7 +70,7 @@ export function StreakBadge() {
   const status = streakStatus(player, Date.now());
   const st = streakState(player);
   const day = cycleDay(status.next);
-  const reward = streakReward(player, status.next);
+  const reward = streakReward(player, status.next, Date.now());
 
   const claim = async () => {
     setBusy(true);

@@ -5,8 +5,7 @@ import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
 import { BUILDINGS, fullHangarCapacity, LOCKABLE_BUILDINGS, requiredForAscension } from "@/game/buildings";
 import { TECHNOLOGIES } from "@/game/technologies";
 import { UNITS, type UnitDef } from "@/game/units";
-import { COMMON_RESOURCES } from "@/game/economy";
-import { getProductionRatesPerSecond } from "@/game/production";
+import { productionReward } from "@/game/startRewards";
 import { factionStates, findFaction } from "@/game/pirates";
 import { playerStats } from "@/game/stats";
 import { GameActionError } from "@/game/errors";
@@ -1020,16 +1019,11 @@ export function checkNewAchievements(player: PlayerState): AchievementDef[] {
   return ACHIEVEMENTS.filter((a) => a.enabled && !unlocked.has(a.id) && achievementValue(a, player) >= a.threshold);
 }
 
-/** Récompense d'un succès (ressources communes pour `rewardHours`). */
-export function achievementReward(a: AchievementDef, player: PlayerState): Partial<Record<ResourceId, number>> {
+/** Récompense d'un succès (ressources communes pour `rewardHours`), à créditer par l'appelant.
+ *  6.14.165 (S6, NJ-25) : compte jeune : au plus `startRewards.youngCapMinutes` de production, le reste en réserve du départ. */
+export function achievementReward(a: AchievementDef, player: PlayerState, now: number): Partial<Record<ResourceId, number>> {
   if (!(a.rewardHours > 0)) return {};
-  const rates = getProductionRatesPerSecond(player.buildings ?? {}, player.techLevels ?? {});
-  const out: Partial<Record<ResourceId, number>> = {};
-  for (const res of COMMON_RESOURCES) {
-    const n = Math.floor((rates[res] ?? 0) * a.rewardHours * 3600);
-    if (n > 0) out[res] = n;
-  }
-  return out;
+  return productionReward(player, a.rewardHours, now);
 }
 
 export function validateAchievements(defs: AchievementDef[]): string[] {

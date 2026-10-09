@@ -1,10 +1,10 @@
-import { formatInt } from "@/game/format";
+import { formatInt, formatShort } from "@/game/format";
 import { atelierLevel, hullPercent, workshopRushCost, workshopUnits } from "@/game/workshop";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { economySnapshot } from "@/game/economy";
 import { RESEARCH_RULES } from "@/game/technologies";
 import { OFFENSIVE_UNITS } from "@/game/units";
-import { RESOURCE_LIST } from "@/game/resources";
+import { commonSurplus, EXCHANGE_RULES, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { BOUNTY_RULES, bountyState, viewBounties } from "@/game/bounties";
 import type { Fleet } from "@/game/fleets";
 import { navPageOpen, navPath } from "@/game/navUnlock";
@@ -17,7 +17,7 @@ import type { PlayerState, QueuesState } from "@/types/game";
    premières cartes.
 ===================================================== */
 
-export type NextActionKind = "outage" | "contracts" | "storage" | "build" | "research" | "mission" | "units" | "fleet" | "bounty" | "repair";
+export type NextActionKind = "outage" | "contracts" | "storage" | "surplus" | "build" | "research" | "mission" | "units" | "fleet" | "bounty" | "repair";
 
 export interface NextAction {
   kind: NextActionKind;
@@ -46,6 +46,26 @@ export function nextActions(player: PlayerState, queues: QueuesState | null, fle
     // 6.14.85 (RL-2, proposition §5.5) : un projet de prestige est la sortie la plus simple quand il est possible.
     if (!prestigeBlocker(player)) out.push({ kind: "storage", priority: 2, title: "Entrepôt plein", text: `${names} : la production est perdue. Lance un projet de prestige, dépense ou agrandis l'entrepôt.`, to: "/game/prestige" });
     else out.push({ kind: "storage", priority: 2, title: "Entrepôt plein", text: `${names} : la production est perdue. Dépense ou agrandis l'entrepôt.`, to: "/game/batiments" });
+  }
+
+  // 6.14.165 (S6, NJ-26, RR-2) : une ressource commune dort pendant qu'une autre manque : le comptoir les échange.
+  const adviceDays = Math.max(0, Number(EXCHANGE_RULES.surplusAdviceDays) || 0);
+  const early = adviceDays === 0 || (!!player.createdAtMs && now - player.createdAtMs < adviceDays * 86_400_000);
+  const surplus = economy.full.length === 0 && early ? commonSurplus(player.resources) : null;
+  if (surplus) {
+    // « de ferraille », « d'énergie instable » (élision devant une voyelle).
+    const de = (id: string) => {
+      const n = (RESOURCE_LIST.find((r) => r.id === id)?.name ?? id).toLowerCase();
+      return /^[aeiouyàâéèêîïôû]/.test(n) ? `d'${n}` : `de ${n}`;
+    };
+    const net = tradeQuote(surplus.sell, surplus.buy, surplus.amount).net;
+    out.push({
+      kind: "surplus",
+      priority: 2,
+      title: "Échange ton surplus",
+      text: `Trop ${de(surplus.sell)} (${formatShort(player.resources[surplus.sell] ?? 0)}), pas assez ${de(surplus.buy)} (${formatShort(player.resources[surplus.buy] ?? 0)}) : échange ${formatShort(surplus.amount)} contre ${formatShort(net)} au comptoir.`,
+      to: `/game/ressources?onglet=comptoir&vendre=${surplus.sell}&recevoir=${surplus.buy}&quantite=${surplus.amount}`,
+    });
   }
 
   if (queues) {

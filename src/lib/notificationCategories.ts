@@ -17,6 +17,15 @@ export function inCategory(kind: NotificationKind, category: NotificationCategor
   return !def?.kinds || def.kinds.includes(kind);
 }
 
+/** 6.14.165 (S6, NJ-30) : notifications de routine (fin de chantier, de recherche, d'unités, de mission) : elles restent dans
+ *  la cloche et au Journal, mais ne comptent pas dans le chiffre de la cloche (« 9+ » dès la 8e minute, 53 non lues à la 35e) ;
+ *  seules, elles n'y mettent qu'un point. */
+export const ROUTINE_KINDS: NotificationKind[] = ["building", "research", "unit", "mission"];
+
+export function countsInBadge(kind: NotificationKind): boolean {
+  return !ROUTINE_KINDS.includes(kind);
+}
+
 /** Alertes qui gardent toujours leur propre toast, même en rafale. */
 export const URGENT_KINDS: NotificationKind[] = ["combat-defender", "spy-detected", "fleet", "season"];
 

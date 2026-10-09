@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { AlertTriangle, ArrowRight, Building2, Crosshair, FlaskConical, Gift, MapPin, Rocket, Warehouse, Zap, Wrench } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, ArrowRight, Building2, Crosshair, FlaskConical, Gift, MapPin, Rocket, Warehouse, Zap, Wrench } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { nextActions, type NextActionKind } from "@/game/nextActions";
 import { usePlayerStore } from "@/store/playerStore";
@@ -16,6 +16,7 @@ const STYLE: Record<NextActionKind, { icon: typeof Zap; tone: HudTone }> = {
   outage: { icon: Zap, tone: "danger" },
   contracts: { icon: Gift, tone: "gold" },
   storage: { icon: Warehouse, tone: "ember" },
+  surplus: { icon: ArrowLeftRight, tone: "accent" },
   build: { icon: Building2, tone: "accent" },
   research: { icon: FlaskConical, tone: "accent" },
   mission: { icon: MapPin, tone: "accent" },
@@ -25,14 +26,15 @@ const STYLE: Record<NextActionKind, { icon: typeof Zap; tone: HudTone }> = {
   repair: { icon: Wrench, tone: "ember" },
 };
 
-/** `exclude` : sortes déjà dites ailleurs sur l'écran (6.14.63 : sur l'accueil, les pastilles de chantiers à l'arrêt). */
-export function NextActionsCard({ max = 4, exclude = [] }: { max?: number; exclude?: readonly NextActionKind[] }) {
+/** `exclude` : sortes déjà dites ailleurs sur l'écran (6.14.63 : sur l'accueil, les pastilles de chantiers à l'arrêt).
+ *  `only` : seulement ces sortes (6.14.165 : pendant la prise en main, le conseil « Échange ton surplus » seul). */
+export function NextActionsCard({ max = 4, exclude = [], only }: { max?: number; exclude?: readonly NextActionKind[]; only?: readonly NextActionKind[] }) {
   const player = usePlayerStore((s) => s.player);
   const queues = usePlayerStore((s) => s.queues);
   const fleets = useFleetStore((s) => s.fleets);
   if (!player) return null;
   const actions = nextActions(player, queues, fleets, Date.now())
-    .filter((a) => !exclude.includes(a.kind))
+    .filter((a) => !exclude.includes(a.kind) && (!only || only.includes(a.kind)))
     .slice(0, max);
   if (actions.length === 0) return null;
 

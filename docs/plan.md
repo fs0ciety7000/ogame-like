@@ -37,9 +37,9 @@ Tant que l'étape 3 n'est pas faite, **aucun nouveau système** : seulement des 
 | S2 | NJ-3 | Arbre du Labo illisible sur mobile : vue liste | livré (6.14.162) |
 | S3 | NJ-4, NJ-5 | Récompenses du raid d'initiation et du Carnet démesurées (864 000 à la 18e minute pour 15/s de production) ; ferraille seul goulot : proposition chiffrée puis réglage ([proposition](proposals/recompenses-du-depart.md) ; reste de NJ-5 : lot RR-2, Q410) | livré (6.14.163) |
 | S4 | autres 🟠 et 🟡 (NJ-7, NJ-9, NJ-11 à NJ-17, NJ-19 à NJ-24, restes de NJ-10 et de S1) | Barre de ressources tronquée, « Espionner » sans texte, aucun message pendant un redéploiement (502)… ; reportés : en-tête collant et plus bas (NJ-7, NJ-14), file des recherches (NJ-16), Labo dans la barre du bas (NJ-17, Q412) | livré (6.14.164) |
-| RR-2 | NJ-5 (reste) | Surplus de nanocomposants et de données (Q410) : mesure au parcours S5, puis correction si besoin | après S5 |
+| RR-2 | NJ-5 (reste) | Surplus de nanocomposants et de données (Q410) : mesuré au parcours S5 (NJ-26), comptoir commune ↔ commune affiché et réglable, conseil « Échange ton surplus » les 3 premiers jours ([proposition](proposals/recompenses-du-depart.md) §10) | livré (6.14.165, avec S6) |
 | S5 | — | Nouveau parcours joué (1 h au plus) après S1 à S4 | fait (48 min, 2026-10-09 : corrections tenues, 6 nouveaux constats NJ-25 à NJ-30) |
-| S6 | NJ-25, NJ-26 (RR-2), NJ-27 à NJ-30 | Palier 1 du passe à 2 h de production (921 600 à la 24e minute) : même plafond que le Carnet pour un compte jeune ; surplus de nano et de données (RR-2, Q410) ; « Débloquer » orange sans les rares ; rangée des rares qui déborde ; nom du raider incohérent ; cloche « 9+ » dès la 8e minute | à faire |
+| S6 | NJ-25, NJ-26 (RR-2), NJ-27 à NJ-30 | Palier 1 du passe à 2 h de production (921 600 à la 24e minute) : même plafond que le Carnet pour un compte jeune ; surplus de nano et de données (RR-2, Q410) ; « Débloquer » orange sans les rares ; rangée des rares qui déborde ; nom du raider incohérent ; cloche « 9+ » dès la 8e minute | livré (6.14.165) |
 | S7 | — | Dernier parcours joué (1 h au plus), puis étape 2 | à faire |
 
 ## Leçons (pour ne pas recommencer)

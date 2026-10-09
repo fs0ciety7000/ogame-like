@@ -15,7 +15,7 @@ import { PatrolDialog } from "@/components/game/MissionDialogs";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
 import { findUnit } from "@/game/units";
 import { factionOfLair, findFaction } from "@/game/pirates";
-import { formatClock, formatCompact, formatDateTime } from "@/lib/utils";
+import { formatClock, formatCompact, formatDateTime, frDe, frDeParts } from "@/lib/utils";
 import { GameActionError, jumpFleet, recallFleet, launchFleet } from "@/services/playerService";
 import { gateCooldownMs, gateReadyAtMs, gateUnlocked, jumpMissions } from "@/game/jumpGate";
 import { moonLevel, playerMoon } from "@/game/moon";
@@ -248,7 +248,8 @@ export function FleetsPanel({
             <p className="flex items-start gap-1.5 text-xs font-semibold text-danger-glow">
               <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
               <span className="min-w-0">
-                {f.mission === "pirate" ? "Raid du" : "Attaque de"} <PlayerName uid={f.ownerUid} pseudo={f.ownerPseudo} /> — impact dans{" "}
+                {/* 6.14.165 (S6, NJ-29) : « Raid du Silencieux » (avant : « Raid du Le Silencieux »). */}
+                {f.mission === "pirate" ? `Raid ${frDe(f.ownerPseudo)}` : <>Attaque {frDeParts(f.ownerPseudo)[0]}<PlayerName uid={f.ownerUid} pseudo={frDeParts(f.ownerPseudo)[1]} /></>} — impact dans{" "}
                 <span className="font-mono tabular-nums">{formatClock(left)}</span>
               </span>
             </p>

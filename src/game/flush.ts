@@ -81,7 +81,7 @@ export function grantNewAchievements(player: PlayerState, now: number, notificat
     const rewards = new Map<string, Partial<Record<ResourceId, number>>>();
     const allRewards: Partial<Record<ResourceId, number>> = {};
     for (const a of newAchievements) {
-      const reward = achievementReward(a, player);
+      const reward = achievementReward(a, player, now);
       rewards.set(a.id, reward);
       for (const [res, amount] of Object.entries(reward) as [ResourceId, number][]) {
         player.resources[res] = (player.resources[res] ?? 0) + amount;

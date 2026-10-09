@@ -365,6 +365,8 @@ script dépense tout dès que c'est payable : un joueur humain y arrivera sans d
 
 **🟠 NJ-25. Le palier 1 du passe verse 2 h de production à la 24e minute.**
 
+- **État** : Corrigé en 6.14.165 (S6) : toute récompense en heures d'un compte de moins de 24 h vaut au plus 60 min de production, le reste va à la réserve du départ.
+
 - **Ce que voit le joueur** : le palier 1 du passe est atteint à la 15e minute. « Tout réclamer » le paie avec un objectif de prise en main :
   **388 800 ferraille, 208 800 énergie, 208 800 nanocomposants, 115 200 données** (921 600 au total) et 30 modules. Les stocks passent de
   ~20 k à ~400 k d'un coup.
@@ -377,6 +379,8 @@ script dépense tout dès que c'est payable : un joueur humain y arrivera sans d
 
 **🟠 NJ-26. Le surplus de nanocomposants et de données reste entier (RR-2, Q410).**
 
+- **État** : Corrigé en 6.14.165 (S6, RR-2) : comptoir commune ↔ commune affiché (1 pour 1, réglable), conseil « Échange ton surplus » les 3 premiers jours.
+
 - **Ce que voit le joueur** : à 45 min, 309 k de nanocomposants et 205 k de données dorment, alors que la ferraille est à 13 k et que
   l'extracteur de ferraille niveau 8 demande 191 900 de ferraille et 121 300 d'énergie. Aucun conseil ne parle du surplus ; le comptoir
   dit « Aucun échange commune ↔ commune ».
@@ -386,12 +390,16 @@ script dépense tout dès que c'est payable : un joueur humain y arrivera sans d
 
 **🟡 NJ-27. « Débloquer » paraît actif quand il manque des ressources rares.**
 
+- **État** : Corrigé en 6.14.165 (S6) : bouton grisé, pastilles « manque N », « Il manque : … » et lien vers le comptoir.
+
 - **Ce que voit le joueur** : Atelier de réparation et Labo de synthèse montrent un bouton « DÉBLOQUER » orange, alors qu'il manque 20 de
   chacune des 4 ressources rares. Le toucher affiche « RESSOURCES INSUFFISANTES. » sans dire lesquelles. « Améliorer » est, lui, bien grisé.
 - **Capture** : `03-debloquer-atelier.png`.
 - **Piste** : griser « Débloquer » comme « Améliorer », avec « manque N » sous chaque coût.
 
 **🟡 NJ-28. La rangée des ressources rares déborde à droite.**
+
+- **État** : Corrigé en 6.14.165 (S6) : pastilles qui passent à la ligne, rares sur leur ligne en 4 colonnes à 375 px.
 
 - **Ce que voit le joueur** : à 375 px, la rangée (série, Ambre, 4 rares) mesure 400 px dans un cadre de 375 px qui défile en douce
   (`overflow-x: auto`). Le Fragment d'IA est coupé au bord ; dès que l'Ambre apparaît, deux rares sont hors de l'écran. Rien n'indique
@@ -401,12 +409,16 @@ script dépense tout dès que c'est payable : un joueur humain y arrivera sans d
 
 **🟡 NJ-29. Qui attaque au raid d'initiation ? Et deux fautes de plus.**
 
+- **État** : Corrigé en 6.14.165 (S6) : l'histoire présente le Silencieux (exécuteur de Varan) ; « Attaque du Silencieux », « Raid repoussé : Confrérie du Vide ».
+
 - L'histoire nomme le Capitaine Orsk Varan, l'alerte dit « Raid : Le Silencieux » et le rapport « Attaque de Le Silencieux (Confrérie du Vide) » :
   le joueur ne sait pas qui est le Silencieux, et « de Le » reste dans le titre du rapport (`frDe` n'y est pas appliqué).
 - Journal : « Confrérie du Vide **repoussé** ! » (accord : « repoussée »).
 - **Piste** : un seul nom pour l'assaillant du raid scripté (Varan ou ses « éclaireurs »), `frDe` dans le titre du rapport, accord du message.
 
 **🟡 NJ-30. La cloche affiche « 9+ » dès la 8e minute et ne redescend plus.**
+
+- **État** : Corrigé en 6.14.165 (S6) : fins de chantier, de recherche, d'unités et de mission hors du chiffre (un point seulement).
 
 - **Ce que voit le joueur** : chaque fin de chantier, de recherche ou de mission est une notification : 53 non lues à la 35e minute. La
   pastille ne signale plus rien d'important.

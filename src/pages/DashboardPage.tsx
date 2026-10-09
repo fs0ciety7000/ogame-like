@@ -121,7 +121,8 @@ export function DashboardPage() {
   // 6.14.63 (AD-8) : pendant la Prise en main dépliée, son objectif courant et les pastilles suffisent.
   const onboardingOpen = onboardingEligible(player) && !onboardingState(player).hidden;
   const sections: Record<DashboardSection, ReactNode> = {
-    next: onboardingOpen ? null : <NextActionsCard exclude={SAID_BY_QUEUE_STRIP} />,
+    // 6.14.165 (S6, NJ-26) : pendant la prise en main, seul le conseil « Échange ton surplus » (l'énergie bloque de la 18e à la 24e minute).
+    next: onboardingOpen ? <NextActionsCard max={1} only={["surplus"]} /> : <NextActionsCard exclude={SAID_BY_QUEUE_STRIP} />,
     fleets: <FleetsPanel hideWhenEmpty />,
     progress: <ProgressHub now={now} />,
     economy: (

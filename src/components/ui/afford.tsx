@@ -4,6 +4,7 @@ import { CostPill } from "@/components/ui/hud";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger, type TooltipRow } from "@/components/ui/tooltip";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
+import { RESOURCE_LIST } from "@/game/resources";
 import type { ResourceId } from "@/types/game";
 
 /* v4.9.3 : coûts et blocages présentés partout comme sur les colonies — pastille
@@ -115,3 +116,31 @@ export function AffordReason({ seconds }: { seconds: number }) {
     );
   return <BlockedReason>Disponible dans ~{formatDuration(Math.ceil(seconds))} à production constante.</BlockedReason>;
 }
+
+/** 6.14.165 (S6, NJ-27) : « Il manque : 20 Acier renforcé, 20 Module cybernétique. » sous un bouton grisé, avec le comptoir quand
+ *  une ressource manquante n'est pas produite, sinon l'attente à production constante. Rien si tout est payable. */
+export function MissingReason({ cost, stock, rates }: { cost: Amounts; stock: Amounts; rates: Amounts }) {
+  const lacks = (Object.entries(cost) as [ResourceId, number][])
+    .map(([r, n]) => [r, Math.ceil((n ?? 0) - (stock[r] ?? 0))] as const)
+    .filter(([, lack]) => lack > 0);
+  if (!lacks.length) return null;
+  const seconds = secondsToAfford(cost, stock, rates);
+  return (
+    <BlockedReason>
+      Il manque : {lacks.map(([r, lack]) => `${formatCompact(lack)} ${RESOURCE_NAMES[r] ?? r}`).join(", ")}.{" "}
+      {Number.isFinite(seconds) ? (
+        <>Disponible dans ~{formatDuration(Math.ceil(seconds))} à production constante.</>
+      ) : (
+        <>
+          Échange-les au{" "}
+          <Link to={EXCHANGE_PATH} className="font-semibold text-cyan-glow underline-offset-2 hover:underline">
+            comptoir
+          </Link>
+          .
+        </>
+      )}
+    </BlockedReason>
+  );
+}
+
+const RESOURCE_NAMES: Record<string, string> = Object.fromEntries(RESOURCE_LIST.map((r) => [r.id, r.name]));

@@ -431,6 +431,13 @@
         "required": false,
         "maxSize": 1000,
         "presentable": false
+      },
+      {
+        "name": "startReserve",
+        "type": "json",
+        "required": false,
+        "maxSize": 1000,
+        "presentable": false
       }
     ],
     "indexes": [

@@ -59,6 +59,13 @@ export function frDe(name: string): string {
   return /^[aeiouyàâéèêëîïôûü]/i.test(n) ? `d'${n}` : `de ${n}`;
 }
 
+/** 6.14.165 (S6, NJ-29) : `frDe` en deux morceaux, pour mettre le nom seul en valeur : ["du ", "Silencieux"], ["d'", "Aldo"]. */
+export function frDeParts(name: string): [string, string] {
+  const full = frDe(name);
+  const m = /^(du |des |de la |de l'|d'|de )([\s\S]*)$/.exec(full);
+  return m ? [m[1], m[2]] : ["de ", name.trim()];
+}
+
 const VOWEL = /[aeiouyàâéèêëîïôûü]/i;
 
 /** 6.14.164 (S4, NJ-19) : Chrome n'a pas toujours de dictionnaire français pour `hyphens: auto` : « COMMUNICATIONS » se coupait

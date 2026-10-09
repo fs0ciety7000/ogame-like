@@ -2,6 +2,7 @@ import { bountyState } from "@/game/bounties";
 import { grantTokens } from "@/game/casino";
 import { GameActionError } from "@/game/errors";
 import { productionHours } from "@/game/pirates";
+import { addStartReserve, splitProductionReward } from "@/game/startRewards";
 import { storageCapacityOf } from "@/game/economy";
 import { parisDay } from "@/game/retention";
 import type { PlayerState, ResourceId } from "@/types/game";
@@ -103,13 +104,20 @@ export function cycleDay(count: number): number {
   return ((Math.max(1, count) - 1) % 7) + 1;
 }
 
-/** Récompense fixe d'un jour (le coffre du 7e jour est tiré à la réclamation). */
-export function streakReward(player: Pick<PlayerState, "buildings" | "techLevels">, count: number): { resources: Partial<Record<ResourceId, number>>; amber: number; tokens: number; chest: boolean } {
+/** Récompense fixe d'un jour (le coffre du 7e jour est tiré à la réclamation).
+ *  6.14.165 (S6, NJ-25) : avec `now`, un compte jeune reçoit au plus `startRewards.youngCapMinutes` de production
+ *  (plancher compris) ; `deferred` est la part mise en réserve du départ à la réclamation. */
+export function streakReward(
+  player: Pick<PlayerState, "buildings" | "techLevels" | "createdAtMs">,
+  count: number,
+  now?: number,
+): { resources: Partial<Record<ResourceId, number>>; deferred: Partial<Record<ResourceId, number>>; amber: number; tokens: number; chest: boolean } {
   const day = cycleDay(count);
-  const raw = productionHours(player, STREAK_RULES.hours[day - 1]);
+  const hours = STREAK_RULES.hours[day - 1];
+  const { paid: raw, deferred } = now === undefined ? { paid: productionHours(player, hours), deferred: {} } : splitProductionReward(player, hours, now);
   const resources: Partial<Record<ResourceId, number>> = {};
   for (const res of COMMONS) resources[res] = Math.max(STREAK_RULES.floor, raw[res] ?? 0);
-  return { resources, amber: day === 6 ? STREAK_RULES.amberDay6 : 0, tokens: STREAK_RULES.dailyTokens, chest: day === 7 };
+  return { resources, deferred, amber: day === 6 ? STREAK_RULES.amberDay6 : 0, tokens: STREAK_RULES.dailyTokens, chest: day === 7 };
 }
 
 /** Situation du jour : déjà réclamé ? quel jour de série serait réclamé ? */
@@ -130,7 +138,8 @@ export function claimStreak(
   if (status.claimed) throw new GameActionError("Récompense du jour déjà réclamée : reviens demain !");
   const st = streakState(player);
   const count = status.next;
-  const reward = streakReward(player, count);
+  const reward = streakReward(player, count, now);
+  addStartReserve(player, reward.deferred);
   const chest = reward.chest ? rollStreakChest(random, player) : null;
   const resources = { ...reward.resources };
   if (chest) for (const [res, n] of Object.entries(chest.resources) as [ResourceId, number][]) resources[res] = (resources[res] ?? 0) + n;

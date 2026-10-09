@@ -5,7 +5,8 @@ import { streakState, streakStatus } from "@/game/streak";
 import { bountyBoardText, bountyRefreshText, bountyState } from "@/game/bounties";
 import { expeditionsPerDay } from "@/game/expeditions";
 import { ALLIANCE_DAILY_RULES } from "@/game/allianceDaily";
-import { formatHours } from "@/game/format";
+import { describeGain, formatHours, formatInt, formatShort } from "@/game/format";
+import { START_REWARD_RULES, startReserveAtMs, startReserveTotal } from "@/game/startRewards";
 import { activePass, passState, passTier } from "@/game/seasonPass";
 import { chronicleOf, chronicleState, unlockedEpisodes } from "@/game/chronicles";
 import type { PlayerState } from "@/types/game";
@@ -21,7 +22,7 @@ import type { PlayerState } from "@/types/game";
 export type OrderState = "ready" | "todo" | "done";
 
 export interface DailyOrder {
-  id: "streak" | "daily" | "contracts" | "casino" | "challenge" | "bounties" | "expedition" | "alliance" | "pass" | "chronicles";
+  id: "streak" | "reserve" | "daily" | "contracts" | "casino" | "challenge" | "bounties" | "expedition" | "alliance" | "pass" | "chronicles";
   label: string;
   /** Rythme affiché : jour, tableau des primes (« 8 h », lu dans BOUNTY_RULES.refreshHours), mois. */
   period: string;
@@ -59,6 +60,26 @@ export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext
     link: "/game/ordres",
     ready: streak.claimed ? 0 : 1,
   });
+
+  // 6.14.165 (S6, NJ-25) : réserve du départ (récompenses en heures retenues tant que le compte était jeune).
+  const reserve = startReserveTotal(player);
+  if (reserve > 0) {
+    const at = startReserveAtMs(player, now);
+    const rReady = count("startReserveClaim");
+    out.push({
+      id: "reserve",
+      label: "Réserve du départ",
+      period: "une fois",
+      state: rReady > 0 ? "ready" : "todo",
+      value: formatShort(reserve),
+      detail:
+        rReady > 0
+          ? `${describeGain(player.startReserve ?? {})} t'attendent.`
+          : `La part de tes récompenses au-delà de ${formatInt(START_REWARD_RULES.youngCapMinutes)} min de production, gardée pour toi. Versée dans ${Math.max(1, Math.ceil(((at ?? now) - now) / 3_600_000))} h.`,
+      link: "/game/ordres",
+      ready: rReady,
+    });
+  }
 
   const dm = dailyMissions(player, now);
   const dmReady = count("dailyClaim");

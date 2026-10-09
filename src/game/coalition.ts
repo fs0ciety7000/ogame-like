@@ -1,4 +1,4 @@
-import { productionHours } from "@/game/pirates";
+import { productionReward } from "@/game/startRewards";
 import { addPassPoints } from "@/game/seasonPass";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import type { WarlordDef, WarlordsState } from "@/game/warlords";
@@ -180,7 +180,8 @@ export function grantCoalitionReward(
   const mine = co.contributions[player.uid] ?? 0;
   if (co.status !== "won" || mine < co.goal * COALITION_RULES.minShare) return { eligible: false, gain: {} };
   addPassPoints(player, "coalition", now);
-  const gain = productionHours(player, COALITION_RULES.rewardHours);
+  // 6.14.165 (S6, NJ-25) : compte jeune : au plus `startRewards.youngCapMinutes` de production, le reste en réserve du départ.
+  const gain = productionReward(player, COALITION_RULES.rewardHours, now);
   for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
   const rank = coalitionRanking(co).findIndex((r) => r.uid === player.uid);
   let relic: string | undefined;
