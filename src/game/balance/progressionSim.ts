@@ -9,6 +9,10 @@ import { missionRewards, rareRewardScale } from "@/game/economy";
 import { EXPEDITION_RULES } from "@/game/expeditions";
 import { MISSIONS } from "@/game/missions";
 import { ONBOARDING_STEPS } from "@/game/onboarding";
+import { GUIDE_STEPS, guideStepReward } from "@/game/advancedGuide";
+import { DEFAULT_FACTIONS, findFaction } from "@/game/pirates";
+import { START_REWARD_RULES, tutorialRaidBounty } from "@/game/startRewards";
+import { TUTORIAL_RAID } from "@/game/story";
 import { PRESTIGE_RULES } from "@/game/prestige";
 import { getRank } from "@/game/ranks";
 import { getProductionRatesPerSecond } from "@/game/production";
@@ -127,6 +131,10 @@ export interface ProgressionOptions {
    *  pas de `stepSeconds`, 10 s par défaut, qui doit diviser le pas de la simulation). Ces pas ne comptent pas dans les relevés
    *  de sessions. Niveaux relevés aux minutes `marks`. Absent : pas d'ouverture (repères d'I29 inchangés). */
   opening?: { minutes: number; stepSeconds?: number; marks?: number[] };
+  /** 6.14.163 (S3, proposals/recompenses-du-depart.md) : récompenses du départ hors prise en main, versées une fois : prime du
+   *  raid d'initiation à `raidMinute` et objectif « dailyGoal » du Carnet à `guideMinute` (règles `startRewards` : indexées sur la
+   *  production, ou anciennes valeurs si décochées). Absent : non simulées (repères d'I29 inchangés). */
+  startRewards?: { raidMinute: number; guideMinute: number };
 }
 
 /** 6.14.159 (RD-1) : relevé des premières minutes (option `opening`). */
@@ -249,6 +257,8 @@ export interface ProgressionResult {
   reachHours: { l5: number | null; l10: number | null };
   /** 6.14.159 (RD-1) : relevés de l'option `opening` (vide sans elle). */
   opening: ProgressionOpeningMark[];
+  /** 6.14.163 (S3) : récompenses du départ versées (option `startRewards`), et production commune par heure à ce moment. */
+  startRewardsPaid: { raid: Record<string, number>; raidPerHour: number; guide: Record<string, number>; guidePerHour: number };
 }
 
 type Cost = Record<string, number | undefined>;
@@ -295,6 +305,9 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
 
   let streak = 0;
   let lastStreakDay = -2;
+  let raidPaid = false;
+  let guidePaid = false;
+  const startRewardsPaid: ProgressionResult["startRewardsPaid"] = { raid: {}, raidPerHour: 0, guide: {}, guidePerHour: 0 };
   let objStreak = 0;
   let objDays = 0;
   let expToday = 0;
@@ -464,6 +477,30 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
       overflow += over - held;
       w.overflow += over - held;
       res[k] += kept;
+    }
+
+    // 6.14.163 (S3) : prime du raid d'initiation et premier objectif du Carnet (option `startRewards`).
+    if (options.startRewards) {
+      if (!raidPaid && t >= options.startRewards.raidMinute * 60) {
+        raidPaid = true;
+        const f = findFaction(TUTORIAL_RAID.factionId) ?? DEFAULT_FACTIONS.find((x) => x.id === TUTORIAL_RAID.factionId);
+        const r = getProductionRatesPerSecond(buildings, tech);
+        const bounty: Record<string, number> = START_REWARD_RULES.enabled
+          ? (tutorialRaidBounty(player()) as Record<string, number>)
+          : Object.fromEntries(COMMONS.map((k) => [k, Math.floor((r[k] ?? 0) * (f?.bounty.hours ?? 0) * HOUR)]));
+        add(bounty, "raid d'initiation", t);
+        startRewardsPaid.raid = bounty;
+        startRewardsPaid.raidPerHour = Math.round(COMMONS.reduce((a, k) => a + (r[k] ?? 0), 0) * HOUR);
+      }
+      if (!guidePaid && t >= options.startRewards.guideMinute * 60) {
+        guidePaid = true;
+        const step = GUIDE_STEPS.find((s) => s.id === "dailyGoal");
+        const reward = step ? (guideStepReward(step, player()) as Record<string, number>) : {};
+        add(reward, "Carnet", t);
+        startRewardsPaid.guide = reward;
+        const r = getProductionRatesPerSecond(buildings, tech);
+        startRewardsPaid.guidePerHour = Math.round(COMMONS.reduce((a, k) => a + (r[k] ?? 0), 0) * HOUR);
+      }
     }
 
     const day = Math.floor(t / DAY);
@@ -721,6 +758,7 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     fleetFullDay,
     reachHours,
     opening,
+    startRewardsPaid,
   };
 }
 

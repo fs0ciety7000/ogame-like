@@ -13,6 +13,7 @@ import { playerStats } from "@/game/stats";
 import { TALENT_RULES, talentPoints } from "@/game/talents";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { noteAmber } from "@/game/healthTrace";
+import { cappedGuideReward, START_REWARD_RULES } from "@/game/startRewards";
 
 /* =====================================================
    v5.11 : tutoriel avancé, le « Carnet du commandant ». Après la prise en
@@ -48,6 +49,43 @@ export const GUIDE_CHAPTERS: { id: GuideChapterId; label: string; emoji: string 
 
 const colonies = (p: PlayerState) => p.colonies ?? [];
 
+/** 6.14.163 (S3, docs/proposals/recompenses-du-depart.md) : récompenses du Carnet, réglables dans l'admin (Tous les réglages,
+ *  « Carnet du commandant : récompenses »). Les ressources communes sont plafonnées à la réclamation en minutes de production
+ *  du joueur (`START_REWARD_RULES.guideCapMinutes`, `cappedGuideReward`) : ces montants sont ceux d'un joueur avancé. */
+export const GUIDE_REWARDS: Record<string, Partial<Record<ResourceId, number>>> = {
+  dailyGoal: { scrap: 300_000, energy: 300_000 },
+  colonyReady: { scrap: 2_000_000, energy: 2_000_000 },
+  colonyFound: { reinforcedSteel: 200_000, cyberModule: 200_000 },
+  colonySpec: { syntheticNanites: 200_000, aiFragment: 200_000 },
+  colonyRoute: { reinforcedSteel: 200_000, cyberModule: 200_000 },
+  relicFound: { scrap: 500_000, energy: 500_000 },
+  commander: { nano: 1_000_000, data: 1_000_000 },
+  talent: { reinforcedSteel: 500_000, cyberModule: 500_000, syntheticNanites: 500_000, aiFragment: 500_000 },
+  moonWatch: { scrap: 1_000_000, energy: 1_000_000 },
+};
+
+const GUIDE_REWARD_HINT = "Ressources versées à la réclamation (scrap, energy, nano, data, reinforcedSteel…). Les communes sont plafonnées en minutes de production (Récompenses du départ).";
+export const GUIDE_REWARDS_META = {
+  dailyGoal: { label: "Carnet : réclamer un objectif du jour", hint: GUIDE_REWARD_HINT },
+  colonyReady: { label: "Carnet : cumuler les niveaux de bâtiments (colonie prête)", hint: GUIDE_REWARD_HINT },
+  colonyFound: { label: "Carnet : fonder une colonie", hint: GUIDE_REWARD_HINT },
+  colonySpec: { label: "Carnet : spécialiser une colonie", hint: GUIDE_REWARD_HINT },
+  colonyRoute: { label: "Carnet : ouvrir une route logistique", hint: GUIDE_REWARD_HINT },
+  relicFound: { label: "Carnet : obtenir une relique", hint: GUIDE_REWARD_HINT },
+  commander: { label: "Carnet : mettre un commandant en poste", hint: GUIDE_REWARD_HINT },
+  talent: { label: "Carnet : apprendre un talent", hint: GUIDE_REWARD_HINT },
+  moonWatch: { label: "Carnet : ta lune veille", hint: GUIDE_REWARD_HINT },
+};
+
+/** 6.14.163 : Ambre des objectifs du Carnet (réglable). */
+export const GUIDE_AMBER: Record<string, number> = { empireClass: 10, relicEquip: 10, ascend: 25 };
+export const GUIDE_AMBER_META = {
+  empireClass: { label: "Carnet : choisir une classe (Ambre)", min: 0, max: 10_000 },
+  relicEquip: { label: "Carnet : équiper une relique (Ambre)", min: 0, max: 10_000 },
+  ascend: { label: "Carnet : réaliser une Ascension (Ambre)", min: 0, max: 10_000 },
+};
+
+
 export const GUIDE_STEPS: GuideStep[] = [
   {
     id: "dailyGoal",
@@ -59,7 +97,9 @@ export const GUIDE_STEPS: GuideStep[] = [
       return `Chaque jour, ${n} objectifs tirés pour toi : ressources rares, XP et jetons. Ils se renouvellent à minuit, heure de Paris, et ta série grimpe si tu fais les ${n}.`;
     },
     to: "/game/ordres",
-    reward: { scrap: 300_000, energy: 300_000 },
+    get reward() {
+      return GUIDE_REWARDS.dailyGoal ?? {};
+    },
     done: (p) => (p.contracts?.items ?? []).some((c) => c.claimed) || !!p.contracts?.lastCompletedDay,
   },
   {
@@ -68,8 +108,12 @@ export const GUIDE_STEPS: GuideStep[] = [
     label: "Choisir une classe d'empire",
     learn: "Industriel, Seigneur de guerre ou Explorateur : chaque classe renforce une façon de jouer. Le premier choix est gratuit, en changer coûte de l'Ambre.",
     to: "/game/classe",
-    reward: {},
-    amber: 10,
+    get reward() {
+      return GUIDE_REWARDS.empireClass ?? {};
+    },
+    get amber() {
+      return GUIDE_AMBER.empireClass ?? 0;
+    },
     done: (p) => !!p.empireClass?.id,
   },
   {
@@ -81,7 +125,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     },
     learn: "Une colonie se mérite : il faut une planète mère développée. Chaque niveau de bâtiment compte, fin de partie comprise.",
     to: "/game/batiments",
-    reward: { scrap: 2_000_000, energy: 2_000_000 },
+    get reward() {
+      return GUIDE_REWARDS.colonyReady ?? {};
+    },
     done: (p) => homeLevels(p) >= COLONY_RULES.levelsRequired[0],
   },
   {
@@ -92,7 +138,9 @@ export const GUIDE_STEPS: GuideStep[] = [
       return `Une colonie a son propre stock, ses bâtiments et ses défenses, et produit ${formatPct(COLONY_RULES.productionBonus)} de plus que la planète mère. Ses ressources reviennent par transport.`;
     },
     to: "/game/colonies",
-    reward: { reinforcedSteel: 200_000, cyberModule: 200_000 },
+    get reward() {
+      return GUIDE_REWARDS.colonyFound ?? {};
+    },
     done: (p) => colonies(p).length >= 1,
   },
   {
@@ -101,7 +149,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     label: "Spécialiser une colonie",
     learn: "Forge, Comptoir minier, Bastion ou Dépôt : chaque spécialisation a un bonus et une contrepartie. Le premier choix est libre, puis un changement par semaine.",
     to: "/game/colonies",
-    reward: { syntheticNanites: 200_000, aiFragment: 200_000 },
+    get reward() {
+      return GUIDE_REWARDS.colonySpec ?? {};
+    },
     done: (p) => colonies(p).some((c) => !!c.spec),
   },
   {
@@ -112,7 +162,9 @@ export const GUIDE_STEPS: GuideStep[] = [
       return `Une route fait voyager les ressources sans flotte : rapatrier le stock de la colonie, ou la ravitailler depuis ta planète mère. ${formatPct(COLONY_ROUTE_RULES.feePct)} se perdent en route.`;
     },
     to: "/game/colonies",
-    reward: { reinforcedSteel: 200_000, cyberModule: 200_000 },
+    get reward() {
+      return GUIDE_REWARDS.colonyRoute ?? {};
+    },
     done: (p) => colonies(p).some((c) => !!c.route),
   },
   {
@@ -121,7 +173,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     label: "Obtenir une relique",
     learn: "Les reliques tombent des expéditions longues, des boss et des primes. Plus l'expédition est longue, plus la chance est grande.",
     to: "/game/missions",
-    reward: { scrap: 500_000, energy: 500_000 },
+    get reward() {
+      return GUIDE_REWARDS.relicFound ?? {};
+    },
     done: (p) => relicsState(p).items.length >= 1,
   },
   {
@@ -130,8 +184,12 @@ export const GUIDE_STEPS: GuideStep[] = [
     label: "Équiper une relique",
     learn: "Une relique ne compte que si elle est équipée. Trois reliques identiques se fusionnent en une rareté supérieure.",
     to: "/game/etat-major",
-    reward: {},
-    amber: 10,
+    get reward() {
+      return GUIDE_REWARDS.relicEquip ?? {};
+    },
+    get amber() {
+      return GUIDE_AMBER.relicEquip ?? 0;
+    },
     done: (p) => equippedRelics(p).length >= 1,
   },
   {
@@ -140,7 +198,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     label: "Mettre un commandant en poste",
     learn: "Chaque commandant donne un bonus (production, combat, construction…) et progresse avec l'usage. Seuls les commandants en poste agissent.",
     to: "/game/etat-major",
-    reward: { nano: 1_000_000, data: 1_000_000 },
+    get reward() {
+      return GUIDE_REWARDS.commander ?? {};
+    },
     done: (p) => commandersState(p).active.length >= 1,
   },
   {
@@ -152,8 +212,12 @@ export const GUIDE_STEPS: GuideStep[] = [
       return `Tous les bâtiments au maximum : l'Ascension les remet au niveau 1 contre +${formatPct(ASCENSION_RULES.productionPerAscension)} de production et −${formatPct(ASCENSION_RULES.buildTimePerAscension)} de temps de construction, pour toujours, et ${pts} point${pts > 1 ? "s" : ""} de talent.`;
     },
     to: "/game/profil",
-    reward: {},
-    amber: 25,
+    get reward() {
+      return GUIDE_REWARDS.ascend ?? {};
+    },
+    get amber() {
+      return GUIDE_AMBER.ascend ?? 0;
+    },
     done: (p) => (p.ascensions ?? 0) >= 1,
   },
   {
@@ -162,7 +226,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     label: "Apprendre un talent",
     learn: "Chaque Ascension donne un point de talent à placer dans l'arbre. On peut redistribuer, mais pas trop souvent.",
     to: "/game/profil",
-    reward: { reinforcedSteel: 500_000, cyberModule: 500_000, syntheticNanites: 500_000, aiFragment: 500_000 },
+    get reward() {
+      return GUIDE_REWARDS.talent ?? {};
+    },
     done: (p) => talentPoints(p).spent >= 1,
   },
   {
@@ -174,12 +240,19 @@ export const GUIDE_STEPS: GuideStep[] = [
       return `Un gros combat chez toi peut faire naître une lune. Sa phalange signale les attaques sur tes alliés proches ; au niveau ${JUMP_GATE_RULES.minMoonLevel}, sa porte de saut ramène une flotte d'un coup. Sans lune, envoie une garnison à un allié menacé.`;
     },
     to: "/game/statistiques?onglet=lune",
-    reward: { scrap: 1_000_000, energy: 1_000_000 },
+    get reward() {
+      return GUIDE_REWARDS.moonWatch ?? {};
+    },
     done: (p) => !!playerMoon(p) || (Number(p.moonPity) || 0) > 0 || (playerStats(p).garrisons ?? 0) >= 1,
   },
 ];
 
 export const GUIDE_TITLE = "Commandant aguerri";
+
+/** 6.14.163 (S3) : ce que l'objectif verse à ce joueur (affiché par la carte, versé par la réclamation). */
+export function guideStepReward(step: GuideStep, player: Pick<PlayerState, "buildings" | "techLevels">): Partial<Record<ResourceId, number>> {
+  return START_REWARD_RULES.enabled ? cappedGuideReward(step.reward, player) : { ...step.reward };
+}
 
 export function guideClaimed(p: Pick<PlayerState, "onboarding">): string[] {
   return onboardingState(p).advanced ?? [];
@@ -212,7 +285,9 @@ export function claimGuideStep(player: PlayerState, stepId: string): { resources
   const claimed = guideClaimed(player);
   if (claimed.includes(step.id)) throw new GameActionError("Récompense déjà reçue.");
   if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
-  for (const [res, n] of Object.entries(step.reward) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
+  // 6.14.163 (S3) : ressources communes plafonnées en minutes de production du joueur.
+  const resources = guideStepReward(step, player);
+  for (const [res, n] of Object.entries(resources) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
   if (step.amber) {
     const st = bountyState(player);
     st.amber += step.amber;
@@ -224,7 +299,7 @@ export function claimGuideStep(player: PlayerState, stepId: string): { resources
   if (next.length >= GUIDE_STEPS.length && !(player.titles ?? []).some((t) => t.label === GUIDE_TITLE)) {
     player.titles = [...(player.titles ?? []), { label: GUIDE_TITLE, seasonId: "onboarding", rank: 1 }];
   }
-  return { resources: step.reward, amber: step.amber ?? 0 };
+  return { resources, amber: step.amber ?? 0 };
 }
 
 export function setGuideHidden(player: PlayerState, hidden: boolean): void {

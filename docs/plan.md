@@ -35,8 +35,9 @@ Tant que l'étape 3 n'est pas faite, **aucun nouveau système** : seulement des 
 |:--|:--|:--|:--|
 | S1 | NJ-2, NJ-1, NJ-8, NJ-6, NJ-10, NJ-18 | Alerte du raid scripté bloquée sous la fenêtre d'histoire ; objectif « 5 drones » impossible (Acier renforcé à 0, comptoir non indiqué) et lien vers la mauvaise techno ; conseil faux sur l'XP ; annonce 6.14 et notes de développeur montrées à un débutant | livré (6.14.161) |
 | S2 | NJ-3 | Arbre du Labo illisible sur mobile : vue liste | livré (6.14.162) |
-| S3 | NJ-4, NJ-5 | Récompenses du raid d'initiation et du Carnet démesurées (864 000 à la 18e minute pour 15/s de production) ; ferraille seul goulot : proposition chiffrée puis réglage | à faire |
+| S3 | NJ-4, NJ-5 | Récompenses du raid d'initiation et du Carnet démesurées (864 000 à la 18e minute pour 15/s de production) ; ferraille seul goulot : proposition chiffrée puis réglage ([proposition](proposals/recompenses-du-depart.md) ; reste de NJ-5 : lot RR-2, Q410) | livré (6.14.163) |
 | S4 | autres 🟠 et 🟡 | Barre de ressources tronquée, « Espionner » sans texte, aucun message pendant un redéploiement (502)… | à faire |
+| RR-2 | NJ-5 (reste) | Surplus de nanocomposants et de données (Q410) : mesure au parcours S5, puis correction si besoin | après S5 |
 | S5 | — | Nouveau parcours joué (1 h au plus) après S1 à S4 | à faire |
 
 ## Leçons (pour ne pas recommencer)

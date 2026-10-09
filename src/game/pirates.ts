@@ -21,6 +21,8 @@ import { GameActionError } from "@/game/errors";
 import { describeGain, formatInt } from "@/game/format";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
+import { START_REWARD_RULES, tutorialRaidBounty } from "@/game/startRewards";
+import { TUTORIAL_RAID } from "@/game/story";
 import type { BattleReport, PlayerState, QueuesState, ResourceId, Units } from "@/types/game";
 
 /* =====================================================
@@ -562,6 +564,14 @@ export function productionHours(player: Pick<PlayerState, "buildings" | "techLev
   return out;
 }
 
+/** 6.14.163 (S3) : raid d'initiation ? Faction du tutoriel, raid lancé par la prise en main (`tutorialRaid: "sent"`) et aucun
+ *  raid de cette faction résolu avant (les raids ordinaires ne visent pas un compte de moins de 72 h). Règles désactivées : non. */
+export function isTutorialRaid(player: Pick<PlayerState, "onboarding">, factionId: string, st: Pick<PirateState, "raidsWon" | "raidsLost">): boolean {
+  if (!START_REWARD_RULES.enabled || factionId !== TUTORIAL_RAID.factionId) return false;
+  const ob = player.onboarding as { tutorialRaid?: string } | undefined;
+  return ob?.tutorialRaid === "sent" && (Number(st.raidsWon) || 0) + (Number(st.raidsLost) || 0) === 0;
+}
+
 function total(r: Partial<Record<ResourceId, number>>): number {
   return Object.values(r).reduce((a: number, b) => a + (b ?? 0), 0);
 }
@@ -882,7 +892,9 @@ export function resolvePirateRaid(
     player.lastDefeatAtMs = now;
     notifications.push(note("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emporté ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrepôts protégés n'ont rien laissé à prendre.`, now));
   } else {
-    bounty = productionHours(player, faction.bounty.hours);
+    // 6.14.163 (S3, NJ-4) : le raid d'initiation (premier raid de la faction du tutoriel, lancé par la prise en main) verse
+    // quelques minutes de production réparties comme les coûts, au lieu des heures de la faction (4 h : 216 000 de chaque à 15/s).
+    bounty = isTutorialRaid(player, faction.id, st) ? tutorialRaidBounty(player) : productionHours(player, faction.bounty.hours);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = (bounty[r] ?? 0) + faction.bounty.rare;
     // 5.16 : embargo : la prime grossit.
     if (activeTreaty(st, now)?.kind === "embargo") for (const r of Object.keys(bounty) as ResourceId[]) bounty[r] = Math.floor((bounty[r] ?? 0) * TREATY_RULES.embargoBounty);

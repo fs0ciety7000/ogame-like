@@ -98,6 +98,10 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 
 **NJ-4. La prime du raid d'initiation casse l'économie.**
 
+> **Corrigé en 6.14.163** (S3) : prime du raid d'initiation en minutes de production réparties comme les coûts (30 / 15 / 5 / 5 min au lieu
+> de 4 h de chaque : 49 500 au lieu de 864 000 à 15/s) ; Carnet plafonné à 60 min de production par ressource commune. Proposition :
+> `docs/proposals/recompenses-du-depart.md` ; fiche : `docs/changes/6.14.163-recompenses-du-depart.md`.
+
 - **Ce que voit le joueur** : à la minute 18, il reçoit 216 000 de chaque ressource. Il produit 15/s, ce qui fait environ 4 h de production
   par ressource. Les objectifs du Carnet versent ensuite 300 k puis 2 M.
 - **Conséquence** : toute la progression de la première heure (« Disponible dans ~38 min » pour l'Entrepôt…) disparaît d'un coup.
@@ -108,6 +112,10 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
   prime pour un compte de moins de 1 h. À passer en proposition chiffrée avant de changer quoi que ce soit.
 
 **NJ-5. La ferraille est le seul goulot, et deux ressources ne servent à rien.**
+
+> **En partie corrigé en 6.14.163** (S3) : la prime du raid d'initiation (216 000 de nano et de données) faisait presque tout le surplus ;
+> elle suit désormais les coûts (5 min de nano et de données). Reste le surplus dû à la production égale des quatre extracteurs : lot RR-2
+> (échange au comptoir ou conseil « surplus », Q410), à mesurer au parcours S5. Fiche : `docs/changes/6.14.163-recompenses-du-depart.md`.
 
 - **Ce que voit le joueur** : vers 40 min, 450 k de nanocomposants et 380 k de données s'accumulent, alors que chaque bâtiment demande
   70 à 230 k de ferraille.
@@ -283,5 +291,5 @@ de fenêtres pour quelqu'un qui débute.
    « passe par le marché » au comptoir.
 3. **NJ-3** : ajouter une vue liste au Labo sur mobile, avec le bouton « Lancer » par ligne. **Fait en 6.14.162.**
 4. **NJ-4** : plafonner la prime du raid d'initiation et vérifier les récompenses du Carnet (300 k, 2 M) pour un compte de moins d'une heure.
-   Passer par une proposition chiffrée.
+   Passer par une proposition chiffrée. *Fait en 6.14.163 (S3).*
 5. **NJ-10, NJ-18 et NJ-6** : ne montrer ni l'annonce 6.14 ni les Nouveautés antérieures à un compte neuf, et corriger le conseil sur l'XP.

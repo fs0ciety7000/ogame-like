@@ -26,6 +26,10 @@
 //                                                        # bâtiments, après = courbe du départ ; --depart : temps jusqu'aux extracteurs
 //                                                        # niveau 5 et 10, niveaux à J1, J3, J7, et première heure d'un nouveau compte
 //                                                        # connecté sans interruption (ajouter --apres-bascule pour le jeu d'après le 1er novembre)
+//   node scripts/progression-sim.mjs --base anciennes-recompenses --recompenses --depart   # 6.14.163 (S3) : avant = prime
+//                                                        # du raid d'initiation en heures de la faction et Carnet aux montants fixes,
+//                                                        # après = récompenses du départ indexées ; --recompenses : raid à la 18e minute,
+//                                                        # objectif du jour du Carnet à la 60e (aussi dans la première heure de --depart)
 //
 // Le moteur pur (src/game/balance/progressionSim.ts, pvpBudget.ts) est empaqueté à la volée par esbuild : rien n'est écrit dans le dépôt.
 import { build } from "esbuild";
@@ -72,6 +76,8 @@ const PRESETS = {
   "jonction-4": { rules: { buildTime: { junctionMaxRatio: 4 } } },
   "jonction-6": { rules: { buildTime: { junctionMaxRatio: 6 } } },
   "depart-60": { rules: { buildTime: { startDivisor: 60 } } },
+  // 6.14.163 (S3, proposals/recompenses-du-depart.md) : prime du raid d'initiation en heures de la faction, Carnet aux montants fixes.
+  "anciennes-recompenses": { rules: { startRewards: { enabled: false } } },
   "rythme-6.14.88": {
     rules: { rhythm: { tier2BaseSeconds: 108_000, tier2SecondsPerLevel: 86_400, researchLateFromLevel: 6, researchLateTimeFactor: 30 } },
   },
@@ -93,7 +99,9 @@ const withAscend = args.includes("--ascend");
 const withSwitch = args.includes("--bascule");
 const withCatchup = args.includes("--catchup");
 const withStart = args.includes("--depart");
-const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend", "--bascule", "--catchup", "--apres-bascule", "--depart"].includes(a))[0];
+const withRewards = args.includes("--recompenses");
+const START_REWARDS = { raidMinute: 18, guideMinute: 60 };
+const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend", "--bascule", "--catchup", "--apres-bascule", "--depart", "--recompenses"].includes(a))[0];
 
 function load(arg) {
   if (!arg) return { rules: {} };
@@ -155,6 +163,7 @@ function measure(settings, prestige = false) {
       days,
       ascend: withAscend,
       ...(projects ? { prestigeProjects: projects } : {}),
+      ...(withRewards ? { startRewards: START_REWARDS } : {}),
       milestones: [...new Set([...(withStart ? [1, 3, 7] : []), 14, 30, days])].filter((d) => d <= days),
     };
     const profiles = withCatchup ? E.simulateAllProfilesWithCatchup(simOpts).results : E.simulateAllProfiles(simOpts);
@@ -176,8 +185,10 @@ function measure(settings, prestige = false) {
       catchup: [E.CATCHUP_RULES.maxBonus, E.CATCHUP_RULES.fullBelow],
     };
     // 6.14.159 (RD-1) : première heure, simulée à part (un nouveau compte connecté sans interruption ; les relevés d'I29 n'en dépendent pas).
-    const opening = withStart ? E.simulateAllProfiles({ days: 1, milestones: [], opening: { minutes: 60, stepSeconds: 10, marks: [1, 5, 15, 30, 60] } })[0].opening : [];
-    return { rules, profiles, pvp, opening };
+    const first = withStart ? E.simulateAllProfiles({ days: 1, milestones: [], opening: { minutes: 60, stepSeconds: 10, marks: withRewards ? [1, 5, 15, 18, 20, 25, 30, 45, 60] : [1, 5, 15, 30, 60] }, ...(withRewards ? { startRewards: START_REWARDS } : {}) })[0] : null;
+    const opening = first ? first.opening : [];
+    const startPaid = first ? first.startRewardsPaid : null;
+    return { rules, profiles, pvp, opening, startPaid };
   } finally {
     restore();
     E.applyGameContent({});
@@ -294,6 +305,14 @@ if (withStart) {
   const ob = result.opening;
   console.log(`\nPremière heure (extracteurs ferraille/énergie/nano/données, entrepôt, lancements : chantiers, déblocages et recherches) :`);
   for (let i = 0; i < ob.length; i++) console.log(`- ${ob[i].minute} min : ${oa[i]?.extractors.join("/") ?? "—"} (entrepôt ${oa[i]?.storageLevel ?? "—"}, ${oa[i]?.launched ?? 0} lancements) → ${ob[i].extractors.join("/")} (entrepôt ${ob[i].storageLevel}, ${ob[i].launched} lancements)`);
+  // 6.14.163 (S3) : récompenses du départ versées dans la première heure (--recompenses).
+  if (withRewards && before.startPaid && result.startPaid) {
+    const fmtR = (r) => ["scrap", "energy", "nano", "data"].map((k) => fmtM(r[k] ?? 0)).join(" / ");
+    const mins = (r, perHour) => (perHour > 0 ? `${Math.round((Object.values(r).reduce((a, b) => a + b, 0) / perHour) * 60)} min` : "—");
+    console.log(`\nRécompenses du départ (ferraille / énergie / nano / données ; en minutes de production commune totale du moment) :`);
+    console.log(`- raid d'initiation (${START_REWARDS.raidMinute}e min) : ${fmtR(before.startPaid.raid)} (${mins(before.startPaid.raid, before.startPaid.raidPerHour)}) → ${fmtR(result.startPaid.raid)} (${mins(result.startPaid.raid, result.startPaid.raidPerHour)})`);
+    console.log(`- Carnet, objectif du jour (${START_REWARDS.guideMinute}e min) : ${fmtR(before.startPaid.guide)} (${mins(before.startPaid.guide, before.startPaid.guidePerHour)}) → ${fmtR(result.startPaid.guide)} (${mins(result.startPaid.guide, result.startPaid.guidePerHour)})`);
+  }
 }
 const thr = (x) => (x === null ? "> ×3" : `×${x.toFixed(2)}`);
 const duel = (d) => `${d.outcome}, attaquant −${Math.round(d.attackerLoss * 100)} %, défenseur −${Math.round(d.defenderLoss * 100)} %`;

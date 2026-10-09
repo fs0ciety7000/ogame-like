@@ -29,6 +29,8 @@ import { MOON_RULES, MOON_RULES_META } from "@/game/moon";
 import { NAV_UNLOCK_RULES, NAV_UNLOCK_RULES_META } from "@/game/navUnlock";
 import { NEWCOMER_NEWS_RULES, NEWCOMER_NEWS_RULES_META } from "@/game/announcements";
 import { ONBOARDING_REWARDS, ONBOARDING_REWARDS_META } from "@/game/onboarding";
+import { GUIDE_AMBER, GUIDE_AMBER_META, GUIDE_REWARDS, GUIDE_REWARDS_META } from "@/game/advancedGuide";
+import { START_REWARD_RULES, START_REWARD_RULES_META } from "@/game/startRewards";
 import { PHALANX_RULES, PHALANX_RULES_META } from "@/game/phalanx";
 import { PRESTIGE_RULES, PRESTIGE_RULES_META } from "@/game/prestige";
 import { JUMP_GATE_RULES, JUMP_GATE_RULES_META } from "@/game/jumpGate";
@@ -197,6 +199,10 @@ export const REGISTERED_RULES = {
   // 6.14.161 (S1, NJ-1) : récompenses des 10 objectifs de la prise en main (Acier renforcé de la recherche du Drone).
   onboardingRewards: { label: "Prise en main : récompenses des objectifs", target: () => ONBOARDING_REWARDS, meta: () => ONBOARDING_REWARDS_META },
   tutorialRaid: { label: "Tutoriel : raid de Varan", target: () => TUTORIAL_RAID, meta: () => TUTORIAL_RAID_META },
+  // 6.14.163 (S3, proposals/recompenses-du-depart.md) : récompenses du départ indexées sur la production, récompenses du Carnet.
+  startRewards: { label: "Récompenses du départ : raid d'initiation et plafond du Carnet", target: () => START_REWARD_RULES, meta: () => START_REWARD_RULES_META },
+  guideRewards: { label: "Carnet du commandant : récompenses des objectifs", target: () => GUIDE_REWARDS, meta: () => GUIDE_REWARDS_META },
+  guideAmber: { label: "Carnet du commandant : Ambre des objectifs", target: () => GUIDE_AMBER, meta: () => GUIDE_AMBER_META },
   unitAudit: { label: "Équilibrage : seuils de l'audit des unités", target: () => UNIT_AUDIT_RULES, meta: () => UNIT_AUDIT_RULES_META },
   vacation: { label: "Mode vacances", target: () => VACATION_RULES, meta: () => VACATION_RULES_META },
   warChest: { label: "Coffre de guerre", target: () => WAR_CHEST_RULES, meta: () => WAR_CHEST_RULES_META },

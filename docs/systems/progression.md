@@ -4,6 +4,7 @@
 | Système | Rythme | Chiffres |
 |:--|:--|:--|
 | Bâtiments (départ, 6.14.159) | continu | niveau 2 en **20 s**, niveau 5 en **3 min**, niveau 10 en 1 h 30 (extracteurs) ; ×2 environ par niveau, jonction ×4 avec le second palier (36 h après la bascule) ; nouveau compte : 4 extracteurs au niveau 4 en 5 min ; I49, `docs/proposals/rythme-du-depart.md` |
+| Récompenses du départ (6.14.163) | une fois | raid d'initiation repoussé : **30 / 15 / 5 / 5 min** de production (ferraille, énergie, nano, données ; au moins 1 000), au lieu de 4 h de chaque ; Carnet du commandant : chaque ressource commune ≤ **60 min** de production (au moins 5 000), montants réglables ; prise en main inchangée ; I50, `docs/proposals/recompenses-du-depart.md` |
 | XP et rangs | continu | 28 rangs, de Fer III (100) à Élite (420 000) ; paliers d'XP par source (plein tarif, demi, quart) ; jeu actif ×1,25 à ×1,5 |
 | Saisons | mensuel | champion 200 Ambre + 50 jetons ; podium ; participation 35 Ambre |
 | Divisions (ligues) | hebdo | 6 divisions Bronze → Mythique, 20 % montent, 20 % descendent |
@@ -277,3 +278,15 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
   et une quantité de 1 à 50 ; au moins une tâche. Le tirage n'agit que si `daily.tasks` > 0 (0 depuis 6.2 : la réserve paie seulement
   les journées d'avant la fusion dans les objectifs du jour).
 - Archétypes des Chroniques en section : voir `docs/systems/pnj-boss.md`.
+
+## 6.14.163 (lot S3, NJ-4 et NJ-5) : récompenses du départ
+- Constat du parcours joué : le raid d'initiation repoussé versait 4 h de production de chaque ressource commune (216 000 de chaque à
+  15/s, 18e minute), soit deux à trois niveaux de chaque extracteur d'un coup ; le Carnet versait ensuite 300 000 puis 2 000 000.
+- Règle : une récompense de la première heure vaut de quelques minutes à une heure de la production du joueur au moment où il la reçoit,
+  répartie comme les coûts (invariant I50). Prime du raid d'initiation : `startRewards.tutorialRaidMinutes` (30 / 15 / 5 / 5) ; Carnet :
+  plafond `startRewards.guideCapMinutes` (60) par ressource commune, affiché sur la carte ; rares et Ambre non plafonnés.
+- Réglages : Admin → Règles → Tous les réglages, « Récompenses du départ », « Carnet du commandant : récompenses des objectifs » et
+  « … : Ambre des objectifs ». `startRewards.enabled` décoché : anciennes récompenses.
+- Simulateur : option `startRewards` (`node scripts/progression-sim.mjs --base anciennes-recompenses --recompenses --depart`) ; à 60 min,
+  extracteurs 5/5/5/5 au lieu de 7/7/7/7 ; I29 inchangé. Proposition : `docs/proposals/recompenses-du-depart.md` ;
+  fiche : `docs/changes/6.14.163-recompenses-du-depart.md`.

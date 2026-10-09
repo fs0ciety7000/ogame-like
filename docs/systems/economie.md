@@ -67,3 +67,15 @@ mise, comptoir, butin, tribut, stock de colonie) restent à part, listés dans l
 - Carte « Ce que tu risques » (page Ressources) : « au-delà de l'entrepôt X (production arrêtée) » par ressource, et un rappel.
 - Réglages : Admin → Règles → Tous les réglages, groupe « Entrepôt : gains versés au-delà » (`storageOverflow` : `enabled`,
   `minAmount` 1 000 par ressource, `journalText` avec `{list}`, `cardText`). Code : `storageOverflow.ts`.
+
+## 6.14.163 (lot S3, NJ-4 et NJ-5) : récompenses du départ et goulot de ferraille
+- Les quatre extracteurs produisent autant, mais les coûts du départ sont surtout en ferraille (extracteurs 2,3 : 1 face à l'énergie,
+  entrepôt 2 : 1, unités 2 à 2,5 : 1 ; recherches du début : 50 à 300 de nano ou de données pour 300 à 800 de ferraille). Sur la première
+  heure : ≈ 60 000 de ferraille, 30 000 d'énergie, moins de 1 000 de nano et de données. Le nano et les données servent plus tard
+  (Atelier, Cale sèche, recherches de milieu de partie).
+- La prime du raid d'initiation (4 h de chaque ressource, égale sur les quatre) faisait presque tout le surplus de nano et de données
+  du parcours joué (450 000 à 40 min). Elle suit désormais les coûts : 30 min de ferraille, 15 d'énergie, 5 de nano et de données
+  (`startRewards`, invariant I50). Le Carnet est plafonné à 60 min de production par ressource commune.
+- Reste (lot RR-2, Q410) : le surplus dû à la production égale des quatre extracteurs ; options : échange direct commune ↔ commune au
+  comptoir, conseil « Échange ton surplus », ou nano et données dans les coûts des extracteurs. Proposition :
+  `docs/proposals/recompenses-du-depart.md`.

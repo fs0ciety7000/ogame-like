@@ -20,6 +20,8 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 |:--|:--|:--|:--|
 | Q400 | **Départ rapide des bâtiments** : niveau 2 en 20 s, niveau 5 en 3 min, courbe ×2 par niveau jusqu'au niveau 10 (inchangé) (`docs/proposals/rythme-du-depart.md`) | les premières minutes avancent vite ; 1re Ascension inchangée (actif J10 → J11) | valider |
 | Q401 | **Après la bascule** : plus de saut 1 h 30 → 36 h au niveau 11 ; les niveaux 9 et 10 s'allongent (2 h 15, 9 h) (`docs/proposals/rythme-du-depart.md`) | montée régulière au lieu d'un mur | valider |
+| Q408 | **Raid d'initiation** : prime ramenée à environ 30 min de production (49 500 au lieu de 864 000) (`docs/proposals/recompenses-du-depart.md`) | la première heure garde son rythme ; raids suivants inchangés | valider |
+| Q409 | **Carnet du commandant** : récompenses plafonnées à 60 min de production (≈ 83 000 au lieu de 300 000 au 1er objectif) (`docs/proposals/recompenses-du-depart.md`) | pas de saut de plusieurs niveaux | valider |
 
 ## 3. Récit
 
@@ -42,3 +44,5 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q405 | Notes du changelog cachées aux joueurs (`audience: equipe`) : seule la 6.14.157 est marquée (`docs/changes/6.14.161-parcours-debutant.md`) | valider |
 | Q406 | Vue liste du Labo par défaut seulement sur téléphone (< 768 px) ; sur ordinateur, l'arbre reste par défaut (nœuds à 7 px de texte) (`docs/changes/6.14.162-labo-mobile.md`) | valider |
 | Q407 | Vue liste du Labo : « Verrouillées, à portée » ouvert, « Plus loin » replié par défaut (`docs/changes/6.14.162-labo-mobile.md`) | valider |
+| Q410 | Surplus de nanocomposants et de données (production égale, coûts surtout en ferraille) : reporté au lot RR-2, à mesurer au parcours S5 (`docs/proposals/recompenses-du-depart.md`) | valider |
+| Q411 | Autres récompenses en heures (succès d'or, Chroniques, passe) non plafonnées pour un compte de moins de 24 h : aucune n'est atteignable la première heure (`docs/proposals/recompenses-du-depart.md`) | valider |

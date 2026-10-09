@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { HudChip, HudMeter } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { AmberAmount } from "@/components/ui/amber";
-import { GUIDE_CHAPTERS, GUIDE_TITLE, guideProgress, guideVisible } from "@/game/advancedGuide";
+import { GUIDE_CHAPTERS, GUIDE_TITLE, guideProgress, guideStepReward, guideVisible } from "@/game/advancedGuide";
 import { claimGuide, GameActionError, hideGuide } from "@/services/playerService";
 import { cn, formatCompact } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
@@ -82,7 +82,7 @@ export function CommanderGuideCard({ player }: { player: PlayerState }) {
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className="flex flex-wrap items-center gap-2 font-mono text-xs text-slate-300">
               <Gift className="h-3.5 w-3.5 text-gold-glow" />
-              {Object.entries(next.step.reward).map(([res, n]) => (
+              {Object.entries(guideStepReward(next.step, player)).map(([res, n]) => (
                 <span key={res} className="flex items-center gap-1">
                   <ResourceIcon id={res} className="h-4 w-4" /> {formatCompact(n ?? 0)}
                 </span>
