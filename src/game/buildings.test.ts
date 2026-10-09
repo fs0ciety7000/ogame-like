@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyBuildingDiscount,
+  BUILD_COST_RULES,
   BUILD_TIME_RULES,
   buildingImage,
   getStorageCapacity,
@@ -82,8 +83,10 @@ describe("getBuildingUpgradeCost / getBuildingUpgradeTime", () => {
     // Anciennes formules codées en dur (avant le passage aux données).
     const geo = (base: number, target: number, steps: number, exp: number) =>
       Math.floor(base * Math.pow(Math.pow(target / base, 1 / steps), exp));
+    // 6.14.167 (S9) : ancienne pente des extracteurs, pente adoucie coupée (`buildCost.enabled`) ; hangars et Atelier inchangés.
+    const steep = { ...BUILD_COST_RULES, enabled: false };
     for (let lvl = 2; lvl <= 10; lvl++) {
-      expect(getBuildingUpgradeCost(extractor, lvl)).toEqual({
+      expect(getBuildingUpgradeCost(extractor, lvl, steep)).toEqual({
         scrap: geo(50, 2_500_000, 9, lvl - 1),
         energy: geo(20, 1_800_000, 9, lvl - 1),
       });
@@ -170,8 +173,9 @@ describe("levels 11 to 20", () => {
   const extractor = () => findBuilding("extracteur_ferraille")!;
 
   it("keeps the historical costs and times of levels 1 to 10", () => {
-    // Même formule qu'avant (arrondi inférieur de 2,5 M et 1,8 M).
-    expect(getBuildingUpgradeCost(extractor(), 10)).toEqual({ scrap: 2_499_999, energy: 1_799_999 });
+    // Même formule qu'avant (arrondi inférieur de 2,5 M et 1,8 M), pente adoucie coupée ; 6.14.167 : ×2,5 par niveau dès le 5.
+    expect(getBuildingUpgradeCost(extractor(), 10, { ...BUILD_COST_RULES, enabled: false })).toEqual({ scrap: 2_499_999, energy: 1_799_999 });
+    expect(getBuildingUpgradeCost(extractor(), 10)).toEqual({ scrap: 449_707, energy: 218_750 });
     expect(getBuildingUpgradeCost(extractor(), 2)).toEqual({ scrap: 166, energy: 71 });
     expect(getBuildingUpgradeTime(extractor(), 10)).toBe(9 * 600);
   });

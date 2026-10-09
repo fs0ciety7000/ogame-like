@@ -208,7 +208,9 @@ describe("RL-3 (6.14.88) : rythme sur des mois, 365 jours après la bascule (I29
       expect(over.length, `${r.profile} : mois au-dessus de 15 %`).toBeLessThanOrEqual(1);
       for (const w of r.windows) expect(w.blockedPct, `${r.profile} J${w.fromDay}`).toBeLessThanOrEqual(20);
       // Cible : moins de 2 % de sessions sans action la première semaine (6.14.89 : 0 pour les 4 profils ; 1,8 % pour l'actif en 6.14.88).
-      expect(r.deadSessionsPct.early, r.profile).toBeLessThan(2);
+      // 6.14.167 (S9, proposals/rythme-du-premier-jour.md §6) : l'actif au plus 2 sessions sur 56 (3,6 %) : avec la pente adoucie, il
+      // atteint le second palier 7 h plus tôt (J3,5) et y attend la ferraille une session de plus ; ses mois bloqués baissent (2,9 → 0,8 %).
+      expect(r.deadSessionsPct.early, r.profile).toBeLessThan(r.profile === "actif" ? 4 : 2);
     }
     const j1 = long.actif.snapshots.find((s) => s.day === 7)!;
     expect(Math.min(...j1.extractors)).toBeGreaterThanOrEqual(8);

@@ -34,6 +34,7 @@ import { PassGenFields } from "@/pages/admin/PassGenFields";
 import { MoonRulesFields } from "@/pages/admin/MoonRulesFields";
 import { BuildingTierRulesFields } from "@/pages/admin/BuildingTierRulesFields";
 import { BuildTimeRulesFields } from "@/pages/admin/BuildTimeRulesFields";
+import { BuildCostRulesFields } from "@/pages/admin/BuildCostRulesFields";
 import { NavUnlockRulesFields } from "@/pages/admin/NavUnlockRulesFields";
 import { ChronicleGenFields } from "@/pages/admin/ChronicleGenFields";
 import { CommerceRulesFields } from "@/pages/admin/CommerceRulesFields";
@@ -313,6 +314,8 @@ export function RulesPanel() {
         <BuildingTierRulesFields rules={rules} setRules={setRules} />
         {/* 6.14.159 (RD-1) : courbe du départ (durée des premiers niveaux des bâtiments). */}
         <BuildTimeRulesFields rules={rules} setRules={setRules} />
+        {/* 6.14.167 (S9) : pente adoucie des coûts des niveaux 5 à 10 (extracteurs). */}
+        <BuildCostRulesFields rules={rules} setRules={setRules} />
         <Section title="Rôles par classe et cible prioritaire (5.21)">
           <NumberField
             label="Avantage de classe (0,2 = ±20 %)"

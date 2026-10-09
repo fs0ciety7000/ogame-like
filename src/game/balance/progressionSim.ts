@@ -138,6 +138,36 @@ export interface ProgressionOptions {
   /** 6.14.165 (S6, NJ-26, RR-2) : le joueur échange ses ressources communes en trop au comptoir (commune → commune, taux
    *  `exchange.commonToCommon`, taxe comprise) quand seule une commune manque pour le chantier ou la recherche la moins chère. */
   surplusExchange?: boolean;
+  /** 6.14.167 (S9, proposals/rythme-du-premier-jour.md) : fenêtres de jeu continu, en heures depuis l'inscription ([début, fin],
+   *  heures entières). Le joueur y agit à chaque pas de `opening.stepSeconds` (10 s par défaut), comme pendant l'ouverture ; ces
+   *  pas ne comptent pas dans les relevés de sessions. Sert à mesurer le plus long temps sans action utile (`pace`). */
+  activeWindows?: [number, number][];
+}
+
+/** 6.14.167 (S9) : rythme d'une journée (relevé `pace`). « Action utile » : un chantier, un déblocage ou une recherche lancés ;
+ *  « avec missions » : ou une mission de 5 min et plus relancée (la Patrouille courte d'une minute, en boucle, ne compte pas). */
+export interface ProgressionPaceDay {
+  /** Jour (1 = premier jour). */
+  day: number;
+  /** Minutes de jeu continu ce jour-là (ouverture et `activeWindows`). */
+  continuousMinutes: number;
+  /** Plus long temps sans action utile en jeu continu (min), et la minute du jour où il commence. */
+  longestIdleMinutes: number;
+  longestIdleAt: number;
+  /** Même mesure, une mission de 5 min et plus relancée comptant comme une action. */
+  longestIdleWithMissionsMinutes: number;
+  /** Attentes de plus de 10 min sans action utile (nombre)… */
+  idleOver10: number;
+  /** …et chacune : [minute du jour où elle commence, durée en minutes]. */
+  idleGaps: [number, number][];
+  /** Minutes sans action utile, files pleines (chantiers et Labo occupés)… */
+  idleFullMinutes: number;
+  /** …ou une file libre sans rien d'abordable (le coût freine). */
+  idlePoorMinutes: number;
+  /** Hors jeu continu : actions utiles lancées à chaque retour (session), dans l'ordre… */
+  actionsPerReturn: number[];
+  /** …et missions terminées, récompense reçue et relancées (toutes durées), à chaque retour. */
+  missionsPerReturn: number[];
 }
 
 /** 6.14.159 (RD-1) : relevé des premières minutes (option `opening`). */
@@ -266,6 +296,8 @@ export interface ProgressionResult {
   opening: ProgressionOpeningMark[];
   /** 6.14.163 (S3) : récompenses du départ versées (option `startRewards`), et production commune par heure à ce moment. */
   startRewardsPaid: { raid: Record<string, number>; raidPerHour: number; guide: Record<string, number>; guidePerHour: number; pass: Record<string, number>; passPerHour: number; passDeferred: Record<string, number> };
+  /** 6.14.167 (S9) : rythme jour par jour (jours avec du jeu continu ou des sessions), du premier au dernier. */
+  pace: ProgressionPaceDay[];
 }
 
 type Cost = Record<string, number | undefined>;
@@ -287,11 +319,29 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
   const days = options.days ?? 90;
   const baseStep = options.stepSeconds ?? 600;
   // 6.14.159 (RD-1) : ouverture à pas fin, jusqu'à un multiple du pas de la simulation (les heures de session restent alignées).
-  const openStep = options.opening ? Math.max(1, Math.min(baseStep, options.opening.stepSeconds ?? 10)) : baseStep;
+  const openStep = options.opening || options.activeWindows?.length ? Math.max(1, Math.min(baseStep, options.opening?.stepSeconds ?? 10)) : baseStep;
   const openingEnd = options.opening && baseStep % openStep === 0 ? Math.ceil((Math.max(0, options.opening.minutes) * 60) / baseStep) * baseStep : 0;
   const openingMarks = new Set((options.opening?.marks ?? []).map((m) => Math.round(m * 60)));
   const opening: ProgressionOpeningMark[] = [];
   let openingLaunched = 0;
+  // 6.14.167 (S9) : fenêtres de jeu continu (secondes) et relevé du rythme par jour.
+  const activeWindows = (options.activeWindows ?? []).map(([a, b]) => [Math.round(a) * 3600, Math.round(b) * 3600] as const).filter(([a, b]) => b > a);
+  const inWindow = (t: number) => activeWindows.some(([a, b]) => t >= a && t < b);
+  const paceDays = new Map<number, ProgressionPaceDay>();
+  const paceOf = (day: number): ProgressionPaceDay => {
+    let p = paceDays.get(day);
+    if (!p) paceDays.set(day, (p = { day: day + 1, continuousMinutes: 0, longestIdleMinutes: 0, longestIdleAt: 0, longestIdleWithMissionsMinutes: 0, idleOver10: 0, idleGaps: [], idleFullMinutes: 0, idlePoorMinutes: 0, actionsPerReturn: [], missionsPerReturn: [] }));
+    return p;
+  };
+  let wasContinuous = false;
+  let lastActT = 0;
+  let lastAnyT = 0;
+  const closeGap = (t: number) => {
+    if (t - lastActT <= 600) return;
+    const p = paceOf(Math.floor(lastActT / 86_400));
+    p.idleOver10++;
+    p.idleGaps.push([Math.round((lastActT % 86_400) / 60), Math.round((t - lastActT) / 6) / 10]);
+  };
   const reachHours: { l5: number | null; l10: number | null } = { l5: null, l10: null };
   const useExchange = options.useExchange !== false;
   const milestones = new Set(options.milestones ?? [1, 3, 7, 14, 30, 60, 90]);
@@ -450,8 +500,12 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
   let exchangeT = 0;
 
   for (let t = 0, step = baseStep; t < days * DAY; t += step) {
-    step = t < openingEnd ? openStep : baseStep;
-    const inOpening = t < openingEnd;
+    const inOpening = t < openingEnd || inWindow(t);
+    step = inOpening ? openStep : baseStep;
+    // 6.14.167 (S9) : début et fin d'une fenêtre de jeu continu.
+    if (inOpening && !wasContinuous) lastActT = lastAnyT = t;
+    if (!inOpening && wasContinuous) closeGap(t);
+    wasContinuous = inOpening;
     exchangeT = t;
     // 6.14.106 : développement du jour et rattrapage figé pour la journée (option catchupMedianByDay).
     if (t % DAY === 0) {
@@ -589,9 +643,14 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
         } else objStreak = 0;
       }
       // Missions débloquées, toutes relancées.
+      let missionsLaunched = 0;
+      let missionsCollected = 0;
       for (const m of Object.values(MISSIONS)) {
         if (mQueue[m.key] || !Object.keys(m.prereq).every(unitUnlocked)) continue;
         mQueue[m.key] = t + m.duration;
+        missionsCollected++;
+        // 6.14.167 : une mission de 5 min et plus relancée compte comme une action (pas la Patrouille courte en boucle).
+        if (m.duration >= 300) missionsLaunched++;
       }
       // Expéditions (valeur moyenne, versée tout de suite).
       while (expToday < EXPEDITION_RULES.maxPerDay && unitUnlocked("fregate")) {
@@ -714,6 +773,29 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
         }
       }
       if (inOpening) openingLaunched += launched;
+      // 6.14.167 (S9) : plus long temps sans action utile (jeu continu), actions à chaque retour (sessions).
+      {
+        const p = paceOf(day);
+        if (inOpening) {
+          p.continuousMinutes += step / 60;
+          const gap = launched > 0 ? t - lastActT : t + step - lastActT;
+          if (gap / 60 > p.longestIdleMinutes) {
+            p.longestIdleMinutes = Math.round(gap / 6) / 10;
+            p.longestIdleAt = Math.round(((lastActT % DAY) / 60) * 10) / 10;
+          }
+          const gapAny = launched + missionsLaunched > 0 ? t - lastAnyT : t + step - lastAnyT;
+          p.longestIdleWithMissionsMinutes = Math.max(p.longestIdleWithMissionsMinutes, Math.round(gapAny / 6) / 10);
+          if (launched > 0) {
+            closeGap(t);
+            lastActT = t;
+          } else if (Object.keys(bQueue).length >= slots && Object.keys(rQueue).length >= RESEARCH_RULES.maxConcurrent) p.idleFullMinutes += step / 60;
+          else p.idlePoorMinutes += step / 60;
+          if (launched + missionsLaunched > 0) lastAnyT = t;
+        } else {
+          p.actionsPerReturn.push(launched);
+          p.missionsPerReturn.push(missionsCollected);
+        }
+      }
       // 6.14.159 : les pas de l'ouverture ne sont pas des sessions (relevés inchangés).
       const window = inOpening ? [0, 0] : day < 7 ? dead.early : day < 30 ? dead.mid : dead.late;
       window[1]++;
@@ -812,6 +894,7 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     reachHours,
     opening,
     startRewardsPaid,
+    pace: [...paceDays.values()].sort((a, b) => a.day - b.day).map((p) => ({ ...p, continuousMinutes: Math.round(p.continuousMinutes), idleFullMinutes: Math.round(p.idleFullMinutes), idlePoorMinutes: Math.round(p.idlePoorMinutes) })),
   };
 }
 

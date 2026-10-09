@@ -71,6 +71,10 @@ Références habituelles :
   15, 20 (§4.2, réglables : groupe `buildingTiers`) ; un bâtiment **de courbe** (production, bouclier, capsules) n'a que des **jalons**
   (image, succès, Codex), jamais un bond de production : sa courbe porte l'équilibre d'I29 (GDD §5, règle n° 4, réécrite en 6.14.141).
 - **Temps** : `secondsPerLevel × niveau`, réduit par les bonus ; viser 5 min (niv. 1), environ 2 h (niv. 10), environ 1 j (niv. 20).
+- **Attente** (6.14.167) : le rapport coût ÷ production d'un bâtiment de production grandit d'au plus ×1,4 par niveau au premier palier
+  (OGame, Travian : ×1,1 à ×1,3 ; avant 6.14.167 : ×1,85, l'attente doublait à chaque niveau). Mesure : `node scripts/progression-sim.mjs
+  --courbes` (coût, production, durée, attente, rentabilité) et `--rythme` (plus long temps sans action utile d'un actif connecté en continu,
+  actions et missions à chaque retour) ; cible du premier jour : une action utile toutes les 10 min (invariant I51).
 - Vérifier chaque courbe dans le simulateur admin (« et si ») et l'historique d'équilibrage avant de fixer les chiffres.
 - Un lot qui touche un générateur (Chroniques, passe, catalogue des saisons, saga d'alliance, mutateurs) lance
   `node scripts/procedural-sim.mjs --months 48` avant et après (ou `--base <préréglage | fichier>` pour les deux d'un coup) et reporte

@@ -369,13 +369,66 @@ function tierFor(building: BuildingDef, level: number): UpgradeTier | null {
   return t2 && level >= t2.fromLevel ? t2 : null;
 }
 
-export function getBuildingUpgradeCost(building: BuildingDef, nextLevel: number): ResourceMap {
+/* 6.14.167 (S9, docs/proposals/rythme-du-premier-jour.md) : pente adoucie des coûts du premier palier.
+   Au-delà de `fromLevel − 1`, le coût d'un niveau des bâtiments de production (extracteurs) grandit d'au plus
+   `maxGrowth` par niveau (×2,5 au lieu de ×3,33 pour la ferraille, ×3,55 pour l'énergie), sans jamais dépasser le coût
+   d'avant. La production, elle, monte de ×1,8 par niveau : l'attente d'un niveau grandit moins vite qu'avant.
+   Jonction avec le second palier : un niveau coûte au moins le premier niveau du second palier ÷
+   junctionMaxRatio^(écart de niveaux), toujours sous le coût d'avant (0 = sans jonction). Le second palier ne change
+   pas. Le coût est payé au lancement : rien à migrer, une construction lancée garde son prix et sa fin. */
+export const BUILD_COST_RULES = {
+  /** Décoché : coûts géométriques d'avant la 6.14.167. */
+  enabled: true,
+  /** Premier niveau adouci (le niveau d'avant sert d'ancre). */
+  fromLevel: 5,
+  /** Croissance maximale du coût d'un niveau au suivant. */
+  maxGrowth: 2.5,
+  /** Jonction : un niveau coûte au moins le niveau 11 ÷ ce nombre par niveau d'écart (0 = sans jonction). */
+  junctionMaxRatio: 0,
+  /** Seulement les bâtiments de production (extracteurs) ; décoché : tous les bâtiments. */
+  productionOnly: true,
+};
+
+/** 6.14.167 : libellé, unité, bornes et aide de chaque réglage (admin ; bornes vérifiées par validateRules). */
+export const BUILD_COST_RULES_META = {
+  enabled: { label: "Pente adoucie des coûts activée", hint: "Décoché : coûts du premier palier d'avant la 6.14.167 (×3,33 par niveau pour un extracteur)." },
+  fromLevel: { label: "Adoucie à partir du niveau", unit: "niveau", min: 2, max: 50, hint: "5 : les niveaux 2 à 4 gardent leur coût ; le niveau 4 sert d'ancre." },
+  maxGrowth: { label: "Croissance maximale du coût par niveau", unit: "×", min: 1, max: 10, hint: "2,5 : extracteur niveau 8 à 72 000 ferraille au lieu de 225 800, niveau 10 à 450 000 au lieu de 2,5 M." },
+  junctionMaxRatio: { label: "Jonction avec le second palier : écart maximal de coût", unit: "×", min: 0, max: 100, hint: "0 = sans jonction. Sinon un niveau coûte au moins le niveau 11 ÷ ce nombre par niveau d'écart (jamais plus qu'avant)." },
+  productionOnly: { label: "Seulement les bâtiments de production", hint: "Décoché : hangars, Atelier, Cale sèche… suivent aussi la pente adoucie." },
+};
+
+type BuildCostRules = typeof BUILD_COST_RULES;
+
+/** Le coût d'un niveau du premier palier suit-il la pente adoucie ? */
+function softCostApplies(building: BuildingDef, nextLevel: number, r: BuildCostRules): boolean {
+  if (r.enabled === false || !(r.maxGrowth >= 1) || nextLevel < Math.max(2, Math.floor(r.fromLevel))) return false;
+  if (r.productionOnly !== false && !building.production) return false;
+  const t2 = building.upgrade.tier2;
+  return !t2 || nextLevel < t2.fromLevel;
+}
+
+export function getBuildingUpgradeCost(building: BuildingDef, nextLevel: number, costRules: BuildCostRules = BUILD_COST_RULES): ResourceMap {
   const { baseCost, maxCost, costFromLevel, tier2 } = building.upgrade;
   const t2 = tierFor(building, nextLevel);
   if (t2) return geometricCost(t2.baseCost, t2.maxCost, t2.fromLevel, building.maxLevel, nextLevel);
   // Premier palier : jusqu'au niveau précédant le second palier (ou au niveau max).
   const lastLevel = tier2 ? Math.min(building.maxLevel, tier2.fromLevel - 1) : building.maxLevel;
-  return geometricCost(baseCost, maxCost, costFromLevel, lastLevel, nextLevel);
+  const cost = geometricCost(baseCost, maxCost, costFromLevel, lastLevel, nextLevel);
+  if (!softCostApplies(building, nextLevel, costRules)) return cost;
+  // 6.14.167 : pente adoucie, ancrée sur le niveau d'avant `fromLevel`, jamais au-dessus du coût d'avant.
+  const anchorLevel = Math.max(costFromLevel, Math.floor(costRules.fromLevel) - 1);
+  const anchor = geometricCost(baseCost, maxCost, costFromLevel, lastLevel, anchorLevel);
+  const steps = nextLevel - anchorLevel;
+  const last = geometricCost(baseCost, maxCost, costFromLevel, lastLevel, lastLevel);
+  const out: ResourceMap = {};
+  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) {
+    let soft = Math.floor((anchor[res] ?? n) * Math.pow(costRules.maxGrowth, steps));
+    const j = Number(costRules.junctionMaxRatio) || 0;
+    if (j > 1) soft = Math.max(soft, Math.floor((last[res] ?? n) / Math.pow(j, lastLevel - nextLevel)));
+    out[res] = Math.min(n, soft);
+  }
+  return out;
 }
 
 /** tech4 (Optimisation industrielle) réduit le coût des améliorations de bâtiments. */

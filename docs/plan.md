@@ -42,6 +42,8 @@ Tant que l'étape 3 n'est pas faite, **aucun nouveau système** : seulement des 
 | S6 | NJ-25, NJ-26 (RR-2), NJ-27 à NJ-30 | Palier 1 du passe à 2 h de production (921 600 à la 24e minute) : même plafond que le Carnet pour un compte jeune ; surplus de nano et de données (RR-2, Q410) ; « Débloquer » orange sans les rares ; rangée des rares qui déborde ; nom du raider incohérent ; cloche « 9+ » dès la 8e minute | livré (6.14.165) |
 | S7 | — | Dernier parcours joué (1 h au plus), puis étape 2 | fait (51 min, 2026-10-09 : verdict « prêt pour la mise en production : oui », 4 constats 🟡 NJ-31 à NJ-34) |
 | S8 | NJ-31 à NJ-34, NJ-30 (reste) | Histoire du chapitre 3 trop tôt ; conseil « surplus » qui fait faire un aller-retour taxé ; palier 1 du passe affiché « 2 h » ; objectif « Espionner un joueur » bloquant ; taxe arrondie à 50 % affichée ; cloche « 9+ » par les succès | livré (6.14.166) |
+| S9 | — | **Rythme du premier jour** (demande de l'utilisateur, 2026-10-09 : « que les gens ne s'ennuient pas ») : coûts des niveaux 5 à 10 des extracteurs à ×2,5 par niveau au lieu de ×3,3 (attente du niveau 8 : 3,3 h → 1,1 h), missions de 10, 15 et 30 min ouvertes avec les unités de la prise en main ; simulateur : plus long temps sans action, actions à chaque retour ; invariant I51, I29 ajusté (Q425 à Q430, [proposition](proposals/rythme-du-premier-jour.md)) | livré (6.14.167) |
+| S10 | — | Parcours joué (1 h au plus) après S9 : creux de la 45e minute, missions du premier jour, attente des niveaux 7 et 8 | à faire |
 
 ## Leçons (pour ne pas recommencer)
 

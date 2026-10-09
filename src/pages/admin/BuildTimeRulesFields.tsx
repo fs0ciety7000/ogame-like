@@ -36,7 +36,7 @@ export function BuildTimeRulesFields({ rules, setRules }: { rules: R; setRules: 
     <Section title="Bâtiments : durée des premiers niveaux (6.14.159)">
       <CheckboxField label="Courbe du départ activée" checked={t.enabled !== false} hint="Décoché : (niveau − 1) × durée par niveau du bâtiment, comme avant la 6.14.159." onChange={(on) => set({ enabled: on })} />
       <NumberField label="Niveau 2 : durée par niveau divisée par" value={t.startDivisor} min={1} step={1} hint="30 : 20 s pour un extracteur (600 s par niveau), 6 min pour la Fonderie quantique. Le dernier niveau du premier palier garde sa durée." onChange={(v) => set({ startDivisor: Math.max(1, v ?? 30) })} />
-      <NumberField label="Jonction : écart maximal entre deux niveaux avant le second palier" value={t.junctionMaxRatio} min={0} step={1} hint="6 : après la bascule, niveau 9 en 1 h et niveau 10 en 6 h avant les 36 h du niveau 11. 0 = sans lissage." onChange={(v) => set({ junctionMaxRatio: Math.max(0, v ?? 6) })} />
+      <NumberField label="Jonction : écart maximal entre deux niveaux avant le second palier" value={t.junctionMaxRatio} min={0} step={1} hint="4 : après la bascule, niveau 9 en 2 h 15 et niveau 10 en 9 h avant les 36 h du niveau 11. 0 = sans lissage." onChange={(v) => set({ junctionMaxRatio: Math.max(0, v ?? 4) })} />
       {ref && <BeforeAfter title="Extracteur de ferraille : durée d'un niveau" rows={rows} note="Avant les réductions (technos, officiers, Ascensions)." />}
     </Section>
   );

@@ -23,6 +23,8 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q408 | **Raid d'initiation** : prime ramenée à environ 30 min de production (49 500 au lieu de 864 000) (`docs/proposals/recompenses-du-depart.md`) | la première heure garde son rythme ; raids suivants inchangés | valider |
 | Q409 | **Carnet du commandant** : récompenses plafonnées à 60 min de production (≈ 83 000 au lieu de 300 000 au 1er objectif) (`docs/proposals/recompenses-du-depart.md`) | pas de saut de plusieurs niveaux | valider |
 | Q415 | **Récompenses d'un compte jeune** : 60 min de production au plus pendant 24 h (passe compris), le reste en réserve versée ensuite (`docs/changes/6.14.165-depart-suite.md`) | plus de pluie de ressources la première heure, rien de perdu | valider |
+| Q425 | **Extracteurs moins chers** aux niveaux 5 à 10 (niv 8 : 225 800 → 72 000), second palier inchangé (`docs/proposals/rythme-du-premier-jour.md`) | attente du premier jour divisée par 2 à 5 | valider |
+| Q427 | **Missions de 10 à 30 min** accessibles dès la première heure (`docs/proposals/rythme-du-premier-jour.md`) | une action utile au moins toutes les 10 min | valider |
 
 ## 3. Récit
 
@@ -58,3 +60,7 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q422 | Objectif d'espionnage : seul le texte bloquait (un Seigneur comptait déjà) ; renommé « Espionner un joueur ou un Seigneur » (`docs/changes/6.14.166-derniers-reglages.md`) | valider |
 | Q423 | Cloche : succès et « Nouveau : … » regroupés (1 chacun) pour tous les comptes (`docs/changes/6.14.166-derniers-reglages.md`) | valider |
 | Q424 | Comptoir : quantité par défaut qui donne un brut d'au moins 100, taxe affichée en pourcentage (`docs/changes/6.14.166-derniers-reglages.md`) | valider |
+| Q426 | Adoucir les extracteurs seuls plutôt que tous les bâtiments (7,1 % de sessions sans action en semaine 1) (`docs/proposals/rythme-du-premier-jour.md`) | valider |
+| Q428 | Files pleines (chantiers, Labo) : rien ajouté pour l'instant (7e chantier ou accélérations), mesure au parcours S10 (`docs/proposals/rythme-du-premier-jour.md`) | valider |
+| Q429 | Nanocomposants et données dans les coûts des extracteurs (mur de ferraille) : proposition à part après la mise en production (`docs/proposals/rythme-du-premier-jour.md`) | valider |
+| Q430 | Pas de remboursement de l'ancien prix des extracteurs (pré-prod de test ; la production repart d'un nouvel univers) (`docs/proposals/rythme-du-premier-jour.md`) | valider |

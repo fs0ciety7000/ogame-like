@@ -14,7 +14,7 @@ Tout ce que le joueur construit se paie en ressources. La production tourne hors
 | Entretien de flotte | énergie : 0,015/s par place d'attaque, 0,0075/s par place de défense ; panne d'énergie = autres productions × 0,5 |
 | Rattrapage | jusqu'à **+50 %** de production sous **20 %** de la médiane des actifs (6.14.106, AE-15 ; +25 % sous 10 % avant), dégressif, nul à partir de 50 % ; hors couche empire (I14 intact), validé à +100 % au plus ; migration `rules-6.14.106` des règles restées aux anciens défauts |
 | Échange (comptoir) | taxe 5 % au pot commun ; 1 rare pour 100 communes, **1 pour 250** dès la bascule du rythme (1er novembre 2026, `rhythm.exchangeCommonToRare`, 6.14.88) |
-| Missions (gains indexés) | 1,5 × durée × production (référence des rares 150 000), **0,75** et **400 000** dès la bascule du rythme |
+| Missions (gains indexés) | 1,5 × durée × production (référence des rares 150 000), **0,75** et **400 000** dès la bascule du rythme ; 6.14.167 (I51) : missions du premier jour ouvertes avec les unités de la prise en main : Patrouille du périmètre (10 min, 10 roquettes), Collecte d'énergie (15 min, 6 drones), Forage profond (30 min, 8 drones) |
 | Second palier des bâtiments (niveaux 11 à 20) | coûts ×4 dès la bascule du rythme (AE-L2, `rhythm.tier2CostFactor`) ; durées 36 h + 27 h par niveau pour les 8 bâtiments de l'Ascension (6.14.89) |
 | Vacances | production × 0,25, 2 à 21 jours, 5 jours entre deux ; 6.14.112 (AC-F, I36) : rien qui rapporte ou dépense, une seule liste blanche pour l'action et les routes (`vacation.allowed` : les 8 gestes d'avant), lecture permise |
 

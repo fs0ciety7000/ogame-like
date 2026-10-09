@@ -5999,6 +5999,32 @@ const CONTENT_MIGRATIONS = [
     patches: [],
     appendFromDefaults: ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"],
   },
+  // 6.14.167 (S9, proposals/rythme-du-premier-jour.md) : échelle des missions du premier jour. Trois missions existantes
+  // deviennent accessibles avec les unités de la prise en main (10 roquettes, 6 et 8 drones) ; une mission dont l'admin a
+  // changé les prérequis garde les siens (seule la valeur livrée d'avant est remplacée). Les missions sont rangées par `key`.
+  {
+    id: "missions-premier-jour-6.14.167",
+    key: "missions",
+    patches: [],
+    run(items, changes) {
+      if (!Array.isArray(items)) return false;
+      const patches = [
+        { key: "patrouille_perimetrique", from: { roquette: 30 }, to: { roquette: 10 } },
+        { key: "forage_profond", from: { drone_recuperateur: 12, cargo: 3 }, to: { drone_recuperateur: 8 } },
+        { key: "collecte_energie", from: { chasseur: 6, fregate: 2 }, to: { drone_recuperateur: 6 } },
+      ];
+      let touched = false;
+      patches.forEach((p) => {
+        const m = items.find((x) => x && x.key === p.key);
+        if (m && canonJson(m.prereq) === canonJson(p.from)) {
+          m.prereq = p.to;
+          touched = true;
+          changes.push(`missions-premier-jour-6.14.167 : ${p.key}.prereq`);
+        }
+      });
+      return touched;
+    },
+  },
 ];
 
 function canonJson(v) {

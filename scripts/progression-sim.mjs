@@ -33,6 +33,12 @@
 //                                                        # 6.14.165 (S6) : et palier 1 du passe (2 h) à la 24e, plafonné pour un
 //                                                        # compte jeune ; --surplus : côté « après », communes en trop échangées au
 //                                                        # comptoir (commune → commune) ; stocks de la première heure affichés
+//   node scripts/progression-sim.mjs --base pente-avant --rythme --recompenses --surplus   # 6.14.167 (S9) : avant = coûts du
+//                                                        # premier palier d'avant la pente adoucie ; --rythme : jeu continu de l'actif
+//                                                        # (J1 0–16 h, J2 et J7 7–23 h) : plus long temps sans action utile, attentes
+//                                                        # de plus de 10 min, cause (files pleines ou coût) ; actions à chaque retour
+//                                                        # des 4 profils (J1, J2, J7) ; --courbes : coût, production, durée et attente
+//                                                        # (coût ÷ production) des extracteurs, de l'entrepôt et des premières recherches
 //
 // Le moteur pur (src/game/balance/progressionSim.ts, pvpBudget.ts) est empaqueté à la volée par esbuild : rien n'est écrit dans le dépôt.
 import { build } from "esbuild";
@@ -81,6 +87,22 @@ const PRESETS = {
   "depart-60": { rules: { buildTime: { startDivisor: 60 } } },
   // 6.14.163 (S3, proposals/recompenses-du-depart.md) : prime du raid d'initiation en heures de la faction, Carnet aux montants fixes.
   "anciennes-recompenses": { rules: { startRewards: { enabled: false } } },
+  // 6.14.167 (S9, proposals/rythme-du-premier-jour.md) : coûts du premier palier d'avant la pente adoucie, et variantes étudiées.
+  "pente-avant": { rules: { buildCost: { enabled: false } } },
+  // Avant le lot S9 : coûts d'avant et prérequis d'avant des missions du premier jour (Patrouille du périmètre, Forage profond,
+  // Collecte d'énergie).
+  "avant-s9": {
+    rules: { buildCost: { enabled: false } },
+    missionPrereqs: { patrouille_perimetrique: { roquette: 30 }, forage_profond: { drone_recuperateur: 12, cargo: 3 }, collecte_energie: { chasseur: 6, fregate: 2 } },
+  },
+  "pente-2": { rules: { buildCost: { maxGrowth: 2 } } },
+  "pente-2.5": { rules: { buildCost: { maxGrowth: 2.5 } } },
+  "pente-3": { rules: { buildCost: { maxGrowth: 3 } } },
+  "pente-2.5-j3": { rules: { buildCost: { maxGrowth: 2.5, junctionMaxRatio: 3 } } },
+  "pente-2.5-j4": { rules: { buildCost: { maxGrowth: 2.5, junctionMaxRatio: 4 } } },
+  "pente-2.5-j5": { rules: { buildCost: { maxGrowth: 2.5, junctionMaxRatio: 5 } } },
+  "pente-2-j4": { rules: { buildCost: { maxGrowth: 2, junctionMaxRatio: 4 } } },
+  "pente-2.5-tous": { rules: { buildCost: { maxGrowth: 2.5, productionOnly: false } } },
   "rythme-6.14.88": {
     rules: { rhythm: { tier2BaseSeconds: 108_000, tier2SecondsPerLevel: 86_400, researchLateFromLevel: 6, researchLateTimeFactor: 30 } },
   },
@@ -107,7 +129,10 @@ const withRewards = args.includes("--recompenses");
 const START_REWARDS = { raidMinute: 18, guideMinute: 60, passMinute: 24 };
 // 6.14.165 (S6, NJ-26, RR-2) : --surplus : côté « après », le joueur échange ses communes en trop au comptoir (commune → commune).
 const withSurplus = args.includes("--surplus");
-const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend", "--bascule", "--catchup", "--apres-bascule", "--depart", "--recompenses", "--surplus"].includes(a))[0];
+// 6.14.167 (S9, proposals/rythme-du-premier-jour.md) : rythme d'une journée de jeu et courbes du premier palier.
+const withPace = args.includes("--rythme");
+const withCurves = args.includes("--courbes");
+const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend", "--bascule", "--catchup", "--apres-bascule", "--depart", "--recompenses", "--surplus", "--rythme", "--courbes"].includes(a))[0];
 
 function load(arg) {
   if (!arg) return { rules: {} };
@@ -125,7 +150,7 @@ function deepMerge(a, b) {
 const bothSwitched = args.includes("--apres-bascule");
 const base = { ...load(baseArg), afterSwitch: bothSwitched };
 const extra = load(afterArg);
-const after = { rules: deepMerge({}, extra.rules ?? {}), tier2Factor: extra.tier2Factor ?? 1, afterSwitch: withSwitch || bothSwitched, surplus: withSurplus };
+const after = { rules: deepMerge({}, extra.rules ?? {}), missionPrereqs: extra.missionPrereqs, tier2Factor: extra.tier2Factor ?? 1, afterSwitch: withSwitch || bothSwitched, surplus: withSurplus };
 
 // Empaquetage du moteur pur.
 const dir = mkdtempSync(path.join(tmpdir(), "progression-sim-"));
@@ -135,7 +160,10 @@ await build({
     // 6.14.85 : le simulateur d'abord (même ordre de chargement que le jeu) : commencer par content.ts lisait COLONY_RULES
     // (advancedGuide.ts) avant son initialisation (import circulaire), et le script échouait dès 6.14.8x.
     contents: `
-      export { simulateAllProfiles, simulateAllProfilesWithCatchup, scaleTier2Costs, prestigeProjectsFromRules } from "@/game/balance/progressionSim";
+      export { simulateAllProfiles, simulateAllProfilesWithCatchup, scaleTier2Costs, prestigeProjectsFromRules, simulateProgression, PROGRESSION_PROFILES } from "@/game/balance/progressionSim";
+      export { BUILDINGS, getBuildingUpgradeCost, getBuildingUpgradeTime, productionPerSecond, getStorageCapacity } from "@/game/buildings";
+      export { TECHNOLOGIES, getTechCost, getTechTime } from "@/game/technologies";
+      export { DEFAULT_MISSIONS } from "@/game/missions";
       export { applyGameContent } from "@/game/content";
       export { attackerWinThreshold, budgetDuel } from "@/game/balance/pvpBudget";
       export { COMBAT_RULES } from "@/game/combat";
@@ -159,9 +187,39 @@ await build({
 const E = await import(pathToFileURL(outfile).href);
 rmSync(dir, { recursive: true, force: true });
 
+/** 6.14.167 (S9) : courbes du premier palier (règles chargées) : coût, production, durée et attente de chaque niveau. */
+function firstTierCurves() {
+  const b = (id) => E.BUILDINGS.find((x) => x.id === id);
+  const ex = b("extracteur_ferraille");
+  const st = b("entrepot");
+  const rows = [];
+  for (let n = 2; n <= 12; n++) {
+    const c = E.getBuildingUpgradeCost(ex, n);
+    const prod = E.productionPerSecond("extracteur_ferraille", n - 1);
+    const gain = E.productionPerSecond("extracteur_ferraille", n) - prod;
+    const sc = E.getBuildingUpgradeCost(st, n);
+    rows.push({
+      level: n,
+      scrap: c.scrap ?? 0,
+      energy: c.energy ?? 0,
+      prodBefore: prod,
+      gain,
+      seconds: E.getBuildingUpgradeTime(ex, n),
+      // Attente : ferraille des 4 extracteurs au niveau n ÷ production de ferraille au niveau n − 1 (heures).
+      waitH: prod > 0 ? (4 * (c.scrap ?? 0)) / prod / 3600 : 0,
+      // Rentabilité : coût (ferraille + énergie) ÷ production gagnée (heures).
+      paybackH: gain > 0 ? ((c.scrap ?? 0) + (c.energy ?? 0)) / gain / 3600 : 0,
+      storage: { scrap: sc.scrap ?? 0, energy: sc.energy ?? 0, seconds: E.getBuildingUpgradeTime(st, n) },
+    });
+  }
+  return rows;
+}
+
 function measure(settings, prestige = false) {
   // 6.14.88 : `afterSwitch` résout le contenu à la date de la bascule du rythme (rhythm.ts), sinon avant (règles du code).
-  E.applyGameContent({ rules: settings.rules ?? {} }, settings.afterSwitch ? E.RHYTHM_RULES.switchAt : undefined);
+  // 6.14.167 (S9) : `missionPrereqs` d'un préréglage remplace les prérequis de missions du contenu par défaut.
+  const missions = settings.missionPrereqs ? Object.values(E.DEFAULT_MISSIONS).map((m) => (settings.missionPrereqs[m.key] ? { ...m, prereq: settings.missionPrereqs[m.key] } : m)) : undefined;
+  E.applyGameContent({ rules: settings.rules ?? {}, ...(missions ? { missions } : {}) }, settings.afterSwitch ? E.RHYTHM_RULES.switchAt : undefined);
   const restore = settings.tier2Factor && settings.tier2Factor !== 1 ? E.scaleTier2Costs(settings.tier2Factor) : () => {};
   try {
     const projects = prestige ? E.prestigeProjectsFromRules() : null;
@@ -203,7 +261,22 @@ function measure(settings, prestige = false) {
       : null;
     const opening = first ? first.opening : [];
     const startPaid = first ? first.startRewardsPaid : null;
-    return { rules, profiles, pvp, opening, startPaid };
+    // 6.14.167 (S9) : journée de jeu continu de l'actif (J1 0–16 h, J2 et J7 7–23 h) et actions à chaque retour des 4 profils.
+    const paceOpts = {
+      days: 8,
+      milestones: [],
+      opening: { minutes: 60, stepSeconds: 10, marks: [] },
+      ...(withRewards ? { startRewards: START_REWARDS } : {}),
+      ...(settings.surplus ? { surplusExchange: true } : {}),
+    };
+    const pace = withPace
+      ? {
+          continuous: E.simulateProgression(E.PROGRESSION_PROFILES.actif, { ...paceOpts, activeWindows: [[0, 16], [31, 47], [151, 167]] }).pace,
+          returns: E.simulateAllProfiles(paceOpts).map((r) => ({ profile: r.profile, pace: r.pace })),
+        }
+      : null;
+    const curves = withCurves ? firstTierCurves() : null;
+    return { rules, profiles, pvp, opening, startPaid, pace, curves };
   } finally {
     restore();
     E.applyGameContent({});
@@ -333,6 +406,54 @@ if (withStart) {
     const res = (p) => (Object.keys(p.passDeferred ?? {}).length ? ` ; en réserve ${fmtR(p.passDeferred)}` : "");
     console.log(`- palier 1 du passe, 2 h (${START_REWARDS.passMinute}e min) : ${fmtR(before.startPaid.pass)} (${mins(before.startPaid.pass, before.startPaid.passPerHour)})${res(before.startPaid)} → ${fmtR(result.startPaid.pass)} (${mins(result.startPaid.pass, result.startPaid.passPerHour)})${res(result.startPaid)}`);
     console.log(`- Carnet, objectif du jour (${START_REWARDS.guideMinute}e min) : ${fmtR(before.startPaid.guide)} (${mins(before.startPaid.guide, before.startPaid.guidePerHour)}) → ${fmtR(result.startPaid.guide)} (${mins(result.startPaid.guide, result.startPaid.guidePerHour)})`);
+  }
+}
+// 6.14.167 (S9) : courbes et rythme d'une journée.
+if (withCurves) {
+  const d = (s) => (s < 60 ? `${s} s` : s < 3600 ? `${Math.round(s / 60)} min` : `${(s / 3600).toFixed(1)} h`);
+  const h = (x) => (x < 1 ? `${Math.round(x * 60)} min` : `${x.toFixed(1)} h`);
+  console.log(`\nCourbes de l'extracteur de ferraille (avant → après ; attente : ferraille des 4 extracteurs ÷ production de ferraille du niveau d'avant) :`);
+  console.log(row(["Niv.", "Coût ferraille / énergie", "Pente", "Production (avant → gain)", "Durée", "Attente", "Rentabilité", "Entrepôt (ferraille)"]));
+  console.log(row(["---", "---", "---", "---", "---", "---", "---", "---"]));
+  for (let i = 0; i < result.curves.length; i++) {
+    const a = before.curves[i];
+    const b = result.curves[i];
+    const slope = (c, j) => (j > 0 ? `×${(c[j].scrap / c[j - 1].scrap).toFixed(2)}` : "—");
+    console.log(row([b.level, `${fmtM(a.scrap)} / ${fmtM(a.energy)} → ${fmtM(b.scrap)} / ${fmtM(b.energy)}`, `${slope(before.curves, i)} → ${slope(result.curves, i)}`, `${b.prodBefore}/s (+${b.gain})`, `${d(a.seconds)} → ${d(b.seconds)}`, `${h(a.waitH)} → ${h(b.waitH)}`, `${h(a.paybackH)} → ${h(b.paybackH)}`, `${fmtM(a.storage.scrap)} → ${fmtM(b.storage.scrap)}`]));
+  }
+}
+if (withPace) {
+  console.log(`\nJeu continu de l'actif (J1 0–16 h après l'inscription, J2 et J7 7–23 h ; action utile : chantier, déblocage ou recherche) :`);
+  console.log(row(["Jour", "Minutes jouées", "Plus long sans action utile", "Avec missions", "Attentes > 10 min", "Files pleines (min)", "Coût qui freine (min)"]));
+  console.log(row(["---", "---", "---", "---", "---", "---", "---"]));
+  const at = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")} h ${String(Math.round(m % 60)).padStart(2, "0")}`;
+  for (const day of [1, 2, 7]) {
+    const a = before.pace.continuous.find((p) => p.day === day);
+    const b = result.pace.continuous.find((p) => p.day === day);
+    if (!a || !b) continue;
+    console.log(row([`J${day}`, `${b.continuousMinutes}`, `${a.longestIdleMinutes} min (${at(a.longestIdleAt)}) → ${b.longestIdleMinutes} min (${at(b.longestIdleAt)})`, `${a.longestIdleWithMissionsMinutes} → ${b.longestIdleWithMissionsMinutes} min`, `${a.idleOver10} → ${b.idleOver10}`, `${a.idleFullMinutes} → ${b.idleFullMinutes}`, `${a.idlePoorMinutes} → ${b.idlePoorMinutes}`]));
+  }
+  // Attentes de plus de 10 min du premier jour, par tranche d'heures de jeu.
+  const slices = [[0, 1], [1, 2], [2, 4], [4, 8], [8, 16]];
+  const bySlice = (p) => slices.map(([a, b]) => { const g = (p?.idleGaps ?? []).filter(([at]) => at >= a * 60 && at < b * 60); return g.length ? `${g.length} (max ${Math.max(...g.map((x) => x[1]))} min)` : "0"; });
+  const j1a = before.pace.continuous.find((p) => p.day === 1);
+  const j1b = result.pace.continuous.find((p) => p.day === 1);
+  console.log(`\nJ1, attentes de plus de 10 min par tranche d'heures de jeu (nombre, plus longue) :`);
+  console.log(row(["Tranche", ...slices.map(([a, b]) => `${a}–${b} h`)]));
+  console.log(row(["---", ...slices.map(() => "---")]));
+  console.log(row(["avant", ...bySlice(j1a)]));
+  console.log(row(["après", ...bySlice(j1b)]));
+  console.log(`\nActions utiles à chaque retour, + missions terminées et relancées (« 4+3m » ; sessions des profils, la première heure jouée n'est pas un retour) :`);
+  console.log(row(["Profil", "J1", "J2", "J7"]));
+  console.log(row(["---", "---", "---", "---"]));
+  const list = (r, day) => {
+    const p = r.pace.find((x) => x.day === day);
+    return p ? p.actionsPerReturn.map((n, i) => `${n}+${p.missionsPerReturn[i] ?? 0}m`).join(", ") : "—";
+  };
+  for (let i = 0; i < result.pace.returns.length; i++) {
+    const a = before.pace.returns[i];
+    const b = result.pace.returns[i];
+    console.log(row([b.profile, `${list(a, 1)} → ${list(b, 1)}`, `${list(a, 2)} → ${list(b, 2)}`, `${list(a, 7)} → ${list(b, 7)}`]));
   }
 }
 const thr = (x) => (x === null ? "> ×3" : `×${x.toFixed(2)}`);

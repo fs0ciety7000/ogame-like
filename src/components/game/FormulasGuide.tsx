@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { NumberInput } from "@/components/ui/number-input";
 import { Building2, Calculator, Coins, Crosshair, Factory, FlaskConical, Gauge, Globe2, Hourglass, Landmark, Moon, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
-import { BUILDINGS, effectiveBuildingLevel, getBuildingUpgradeTime, getStorageCapacity, requiredForAscension } from "@/game/buildings";
+import { BUILD_COST_RULES, BUILDINGS, effectiveBuildingLevel, getBuildingUpgradeCost, getBuildingUpgradeTime, getStorageCapacity, requiredForAscension } from "@/game/buildings";
 import { playerUnitCapacity } from "@/game/hangar";
 import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower, resolveCombat } from "@/game/combat";
 import { allianceShieldBonus } from "@/game/alliances";
@@ -458,7 +458,8 @@ recherches en parallèle : ${RESEARCH_RULES.maxConcurrent}`}
       <Block id="ascension" title="Ascension et rythme" icon={Hourglass} intro="Le jeu se joue sur des mois. Le second palier des bâtiments (niveaux 11 à 20) prend des jours ; l'Ascension revient au plus une fois par saison.">
         <Formula>
           {`bâtiments exigés pour l'Ascension : ${ascensionBuildings.length}, tous au niveau maximal${tier2Building && tier2 ? `
-premier palier (${tier2Building.name}) : niveau 2 en ${levelWait(getBuildingUpgradeTime(tier2Building, 2))}, niveau 5 en ${levelWait(getBuildingUpgradeTime(tier2Building, 5))}, niveau ${tier2.fromLevel - 1} en ${levelWait(getBuildingUpgradeTime(tier2Building, tier2.fromLevel - 1))}` : ""}${tier2 ? `
+premier palier (${tier2Building.name}) : niveau 2 en ${levelWait(getBuildingUpgradeTime(tier2Building, 2))}, niveau 5 en ${levelWait(getBuildingUpgradeTime(tier2Building, 5))}, niveau ${tier2.fromLevel - 1} en ${levelWait(getBuildingUpgradeTime(tier2Building, tier2.fromLevel - 1))}${BUILD_COST_RULES.enabled !== false ? `
+coût des extracteurs : × ${formatDecimal(BUILD_COST_RULES.maxGrowth, 2)} au plus par niveau dès le niveau ${BUILD_COST_RULES.fromLevel} (niveau ${tier2.fromLevel - 1} : ${n(getBuildingUpgradeCost(tier2Building, tier2.fromLevel - 1).scrap ?? 0)} ferraille), la production × 1,8 environ` : ""}` : ""}${tier2 ? `
 second palier : niveau ${tier2.fromLevel} en ${longWait(tier2.baseSeconds * 1000)}, puis + ${longWait(tier2.secondsPerLevel * 1000)} par niveau (niveau ${tier2Max} : ${longWait((tier2.baseSeconds + (tier2Max - tier2.fromLevel) * tier2.secondsPerLevel) * 1000)}), avant les réductions` : ""}
 délai entre deux Ascensions : ${ASCENSION_RULES.cooldownDays} jours
 Ascensions au plus : ${ASCENSION_RULES.maxAscensions}

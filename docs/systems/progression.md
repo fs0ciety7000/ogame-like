@@ -5,6 +5,7 @@
 |:--|:--|:--|
 | Bâtiments (départ, 6.14.159) | continu | niveau 2 en **20 s**, niveau 5 en **3 min**, niveau 10 en 1 h 30 (extracteurs) ; ×2 environ par niveau, jonction ×4 avec le second palier (36 h après la bascule) ; nouveau compte : 4 extracteurs au niveau 4 en 5 min ; I49, `docs/proposals/rythme-du-depart.md` |
 | Récompenses du départ (6.14.163) | une fois | raid d'initiation repoussé : **30 / 15 / 5 / 5 min** de production (ferraille, énergie, nano, données ; au moins 1 000), au lieu de 4 h de chaque ; Carnet du commandant : chaque ressource commune ≤ **60 min** de production (au moins 5 000), montants réglables ; prise en main inchangée ; 6.14.165 : toute récompense en heures d'un compte de moins de 24 h ≤ **60 min**, reste en réserve du départ ; I50, `docs/proposals/recompenses-du-depart.md` |
+| Rythme du premier jour (6.14.167) | continu | extracteurs, niveaux 5 à 10 : coût **×2,5** par niveau au plus (au lieu de ×3,33), attente d'un niveau sous **2 h** jusqu'au niveau 10 (avant : 10,7 h) ; missions de **10, 15 et 30 min** dès les unités de la prise en main ; actif connecté en continu : une action utile au moins toutes les **10 min** le premier jour ; I51, `docs/proposals/rythme-du-premier-jour.md` |
 | XP et rangs | continu | 28 rangs, de Fer III (100) à Élite (420 000) ; paliers d'XP par source (plein tarif, demi, quart) ; jeu actif ×1,25 à ×1,5 |
 | Saisons | mensuel | champion 200 Ambre + 50 jetons ; podium ; participation 35 Ambre |
 | Divisions (ligues) | hebdo | 6 divisions Bronze → Mythique, 20 % montent, 20 % descendent |
@@ -303,3 +304,12 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
 - Prise en main (6.14.166, NJ-31, NJ-34) : l'histoire du chapitre 3 attend la fin du raid d'initiation (`tutorialRaidPending`) ;
   l'objectif 8 devient « Espionner un joueur ou un Seigneur » (toute sonde lancée compte déjà, un Seigneur de guerre aussi ; espionner
   ne lève pas la protection).
+
+## 6.14.167 (lot S9) : rythme du premier jour
+
+- Coûts des niveaux 5 à 10 des extracteurs à ×2,5 par niveau au plus (`buildCost`), second palier inchangé ; Patrouille du périmètre,
+  Collecte d'énergie et Forage profond ouverts avec 10 roquettes, 6 et 8 drones (migration de contenu pour les listes restées aux valeurs
+  livrées). Invariant I51 ; I29 : première semaine de l'actif < 4 % de sessions sans action (Q425).
+- Simulateur : jeu continu (`activeWindows`), relevé `pace` (plus long temps sans action utile, attentes de plus de 10 min et leur
+  cause, actions et missions à chaque retour), `node scripts/progression-sim.mjs --rythme --courbes`. Proposition
+  `docs/proposals/rythme-du-premier-jour.md`, fiche `docs/changes/6.14.167-rythme-du-premier-jour.md`.

@@ -23,8 +23,8 @@ export const MISSION_XP_RULES_META = {
 
 export const DEFAULT_MISSIONS: Record<string, MissionDef> = {
   patrouille_courte: { key: "patrouille_courte", name: "Patrouille courte", duration: 60, reward: { scrap: 800, xp: 1 }, prereq: { drone_recuperateur: 2 } },
-  forage_profond: { key: "forage_profond", name: "Forage profond", duration: 1800, reward: { scrap: 35000, xp: 30 }, prereq: { drone_recuperateur: 12, cargo: 3 } },
-  collecte_energie: { key: "collecte_energie", name: "Collecte d'énergie", duration: 900, reward: { energy: 4000, xp: 15 }, prereq: { chasseur: 6, fregate: 2 } },
+  forage_profond: { key: "forage_profond", name: "Forage profond", duration: 1800, reward: { scrap: 35000, xp: 30 }, prereq: { drone_recuperateur: 8 } },
+  collecte_energie: { key: "collecte_energie", name: "Collecte d'énergie", duration: 900, reward: { energy: 4000, xp: 15 }, prereq: { drone_recuperateur: 6 } },
   analyse_signal: { key: "analyse_signal", name: "Analyse de signal", duration: 900, reward: { data: 2500, xp: 15 }, prereq: { drone_recuperateur: 6, sentinelle: 2 } },
   synthese_nano: { key: "synthese_nano", name: "Synthèse de nanocomposants", duration: 1800, reward: { nano: 600, xp: 30 }, prereq: { drone_recuperateur: 10, sentinelle: 4 } },
   expedition_longue: { key: "expedition_longue", name: "Expédition longue durée", duration: 3600, reward: { scrap: 60000, energy: 12000, xp: 60 }, prereq: { fregate: 5, cargo: 4, chasseur: 6 } },
@@ -40,7 +40,7 @@ export const DEFAULT_MISSIONS: Record<string, MissionDef> = {
     prereq: { fregate: 10, sentinelle: 10, chasseur: 10, cargo: 15 },
   },
   patrouille_perimetrique: {
-  key: "patrouille_perimetrique", name: "Patrouille du périmètre", duration: 600, reward: { scrap: 8000, xp: 10 }, prereq: { roquette: 30 } },
+  key: "patrouille_perimetrique", name: "Patrouille du périmètre", duration: 600, reward: { scrap: 8000, xp: 10 }, prereq: { roquette: 10 } },
   verrouillage_radar: { key: "verrouillage_radar", name: "Alerte invasion", duration: 1200, reward: { energy: 6000, xp: 20 }, prereq: { batterie_aa: 20, intercepteur: 10 } },
   suppression_blindee: { key: "suppression_blindee", name: "Repli des envahisseurs", duration: 1800, reward: { reinforcedSteel: 200, xp: 30 }, prereq: { canon_impulsion: 25, roquette: 50 } },
   bombardement_orbital: { key: "bombardement_orbital", name: "Siège repoussé", duration: 2700, reward: { scrap: 45000, cyberModule: 350, xp: 45 }, prereq: { canon_plasma: 50, canon_impulsion: 65 } },
