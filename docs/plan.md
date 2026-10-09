@@ -40,7 +40,8 @@ Tant que l'étape 3 n'est pas faite, **aucun nouveau système** : seulement des 
 | RR-2 | NJ-5 (reste) | Surplus de nanocomposants et de données (Q410) : mesuré au parcours S5 (NJ-26), comptoir commune ↔ commune affiché et réglable, conseil « Échange ton surplus » les 3 premiers jours ([proposition](proposals/recompenses-du-depart.md) §10) | livré (6.14.165, avec S6) |
 | S5 | — | Nouveau parcours joué (1 h au plus) après S1 à S4 | fait (48 min, 2026-10-09 : corrections tenues, 6 nouveaux constats NJ-25 à NJ-30) |
 | S6 | NJ-25, NJ-26 (RR-2), NJ-27 à NJ-30 | Palier 1 du passe à 2 h de production (921 600 à la 24e minute) : même plafond que le Carnet pour un compte jeune ; surplus de nano et de données (RR-2, Q410) ; « Débloquer » orange sans les rares ; rangée des rares qui déborde ; nom du raider incohérent ; cloche « 9+ » dès la 8e minute | livré (6.14.165) |
-| S7 | — | Dernier parcours joué (1 h au plus), puis étape 2 | à faire |
+| S7 | — | Dernier parcours joué (1 h au plus), puis étape 2 | fait (51 min, 2026-10-09 : verdict « prêt pour la mise en production : oui », 4 constats 🟡 NJ-31 à NJ-34) |
+| S8 | NJ-31 à NJ-34, NJ-30 (reste) | Histoire du chapitre 3 trop tôt ; conseil « surplus » qui fait faire un aller-retour taxé ; palier 1 du passe affiché « 2 h » ; objectif « Espionner un joueur » bloquant ; taxe arrondie à 50 % affichée ; cloche « 9+ » par les succès | à faire |
 
 ## Leçons (pour ne pas recommencer)
 

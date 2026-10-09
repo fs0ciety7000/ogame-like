@@ -441,3 +441,108 @@ Les stocks de 40 et 45 min comptent le palier 1 du passe (NJ-25 : +208 800 de na
 Le début est bien meilleur : rien ne bloque, l'histoire et l'alerte s'enchaînent proprement, le Labo se joue au pouce et Fer II arrive à 29 min.
 Le passe rejoue pourtant la pluie de ressources que S3 a retirée au raid, et, passé la 33e minute, on attend des minuteries avec 300 k de
 nanocomposants inutiles. L'objectif « 120 niveaux » du Carnet (38 à 45 min) n'offre pas de prochain pas à portée.
+
+## Troisième passage (6.14.165)
+
+- **Version** : 6.14.165 en ligne sur `test.fs0ciety.org` à 12:26 UTC (attente de 2 min). Partie jouée de 12:26 à 13:14 UTC (48 min).
+- **Compte** : `Testeur_Claude3` (`testeur-claude3@test.invalid`), créé par « Créer mon empire ». Mobile 375 × 812, thème Constellation.
+- **Rythme** : celui d'un joueur humain, une action toutes les 1 à 2 minutes ; pas de relance automatique de tout ce qui est payable.
+  Aucun autre compte touché : l'objectif « Espionner un joueur » (chapitre 3) n'a donc pas été fait (il faut sonder un autre joueur).
+- **Captures** : scratchpad, `pt3/` (01 à 20).
+
+### Chronologie
+
+| Minute | Ce qui se passe |
+|:--|:--|
+| 0–4 | Histoire du chapitre 1, « Tout réclamer » (série J1 : 7 200 ferraille, 2 000 de chaque autre). Extracteur de ferraille niveau 3. |
+| 6–11 | Première recherche, Drone récupérateur, 5 drones. Chapitre 2 à la 11e minute. |
+| 13–20 | Patrouille courte, puis « Entrepôt niveau 2 » : bloqué par l'énergie (10 000) jusqu'à la 19e minute. |
+| 21–27 | « 10 roquettes » : il faut Analyse de matériaux niv. 3, puis la recherche Roquette ; roquettes posées à la 27e minute. |
+| 28 | Objectif réclamé : l'alerte de Varan, **puis l'histoire du chapitre 3 « Le Silencieux a goûté à tes roquettes »**, puis « Attaque imminente » (1:55) : NJ-31. |
+| 30 | Raid repoussé : prime de 48 600 ferraille (30 min), 13 500 énergie, 1 200 nano, 1 200 données. Palier 1 du passe atteint. |
+| 31 | Palier 1 réclamé : **60 min de production versées, 180 k en réserve du départ**. |
+| 32–33 | Conseil « Échange ton surplus » : ferraille → nanocomposants (67,8 k). |
+| 36–40 | Espionnage, 2 sondes ; l'objectif « Espionner un joueur » n'est pas fait (voir plus haut). |
+| 42 | Le conseil demande l'inverse : nanocomposants → ferraille (40,6 k) : NJ-32. |
+| 44–47 | Labo plein (4/4), extracteurs en cours, entrepôt niveau 3 « disponible dans ~31 min ». Plus rien à lancer. |
+
+**« Plus rien à faire »** : vers la **45e minute** (deuxième passage, au rythme d'un script : 33e ; premier passage : 46e). Le Labo est plein,
+les chantiers attendent la ferraille, l'objectif du chapitre 3 demande de sonder un autre joueur. Au rythme humain, le creux arrive plus tard
+et il est plus court : les minuteries de 2 à 3 min laissent toujours un bâtiment à relancer.
+
+### Vérification des corrections
+
+| Constat | Lot | Verdict | Ce que j'ai vu |
+|:--|:--|:--|:--|
+| NJ-25 | S6 | **Tient** | Palier 1 réclamé à la 31e minute : +97,7 k ferraille, +54 k énergie, +14,5 k nano, +14,4 k données, soit 60 min de production à 27 / 15 / 4 / 4 par s. La ligne « Réserve du départ » des Ordres du jour affiche **180 k**, « versée dans 24 h ». Bandeau « Premières 24 h… » sur la page du passe. **Mais** le palier affiche encore « 2 h de production » (la fiche 6.14.165 annonçait « 1 h de production (le reste en réserve du départ) ») : voir NJ-33. |
+| NJ-26 | S6 | **Tient, avec une réserve** | Comptoir : « Commune ↔ commune : 1 pour 1. Rare ↔ rare : 1 pour 1. » ; le lien du conseil préremplit vente, achat et quantité (`?vendre=scrap&recevoir=nano&quantite=67816`), l'échange passe sans détour. **Mais** le conseil fait faire un aller-retour taxé : NJ-32. |
+| NJ-27 | S6 | **Tient** | Atelier de réparation et Labo de synthèse : « Débloquer » grisé, pastilles « manque 20 », « Il manque : 20 Module cybernétique, 20 Nanites synthétiques. Échange-les au comptoir. » (`16-debloquer.png`). |
+| NJ-28 | S6 | **Tient** | 4 rares sur leur ligne, de 16 à 359 px, aucun chiffre coupé, `scrollWidth` 375 (`17-entete.png`). |
+| NJ-29 | S6 | **Tient** | Rapport « Attaque du Silencieux (Confrérie du Vide) », Journal « Raid repoussé : Confrérie du Vide ». La présentation du Silencieux par Vashka est dans le texte du chapitre 2 (`story.ts`), je ne l'ai pas lue à l'écran (pages passées vite). Ordre des récits : NJ-31. |
+| NJ-30 | S6 | **Tient en partie** | Chiffre 3 à la 10e minute (au lieu de « 9+ » à la 8e) ; les fins de chantier ne comptent plus. **Mais** « 9+ » dès la 31e minute : 10 « importantes » sur 28, surtout des succès et des « Nouveau : … » (`11-cloche-9plus.png`). Mieux que 53 à la 35e minute, mais la pastille sature encore dans la première heure. |
+| NJ-1, NJ-2 | S1 | **Tient** | Acier donné par l'objectif 3, recherche Drone sans détour ; histoire du chapitre 2 puis alerte. |
+| NJ-3 | S2 | **Tient** | Labo en liste à 375 px, « Il manque : Analyse de matériaux niv. 3 (tu as 1) ». |
+| NJ-4 | S3 | **Tient** | Prime du raid : 48 600 ferraille = 30 min à 27/s ; série J1 : 7 200 ferraille. |
+| NJ-7, NJ-9, NJ-13, NJ-20, NJ-23 | S4 | **Tient** | Chiffres compacts, `?focus=` sur la carte (roquette, extracteur), comptoir prérempli, pages à 375 px sans défilement horizontal (Ressources, Bâtiments). |
+| NJ-10 | S1 + S4 | **Tient** | Aucune annonce au premier écran. |
+
+### Nouveaux constats
+
+**🟡 NJ-31. L'histoire du chapitre 3 raconte le raid avant qu'il arrive.**
+
+- **Ce que voit le joueur** : à la 28e minute, il réclame « Installer 10 roquettes ». S'enchaînent l'alerte de Varan (« Mes éclaireurs
+  arrivent »), puis aussitôt l'histoire du chapitre 3 : « **Le Silencieux a goûté à tes roquettes.** Varan le renverra plus fort… », puis
+  « Attaque imminente · 1:55 ». Le raid n'arrive que 2 min plus tard.
+- **Cause** : l'intro du chapitre 3 s'affiche au passage de chapitre (réclamation de `rockets10`), alors que le raid scripté part de la
+  même étape avec `TUTORIAL_RAID.delayMinutes` = 2 (`src/game/story.ts`).
+- **Piste** : n'afficher l'intro du chapitre 3 qu'après le rapport du raid (ou réécrire sa première ligne au futur : « Le Silencieux arrive.
+  Tes roquettes vont parler. »).
+
+**🟡 NJ-32. Le conseil « Échange ton surplus » fait faire un aller-retour taxé.**
+
+- **Ce que voit le joueur** : à la 32e minute (juste après le raid et le palier 1), « Trop de ferraille (158,9 k), pas assez de
+  nanocomposants (26,6 k) » ; il échange 67,8 k de ferraille. À la 42e minute, la ferraille est partie dans les extracteurs et le
+  conseil dit l'inverse : « Trop de nanocomposants (95,4 k), pas assez de ferraille (16,2 k) : échange 40,6 k ». À la 47e : encore
+  nano → ferraille (24,2 k). Deux taxes de 5 % (3 391 et 2 002 au pot commun) pour revenir au point de départ.
+- **Cause** : le conseil compare les stocks entre eux, pas aux besoins. La ferraille paie presque tout ; un stock haut de ferraille juste
+  après une prime n'est pas un surplus.
+- **Piste** : ne jamais proposer de vendre la ferraille (ou la ressource la plus demandée par les prochains coûts) ; ou comparer chaque stock
+  au coût des prochaines améliorations, pas aux autres stocks.
+
+**🟡 NJ-33. Le palier du passe annonce toujours « 2 h de production ».**
+
+- Page du passe, compte de 31 min : « Palier 1 | 2 h de production », alors qu'il verse 60 min et met le reste en réserve. Le bandeau
+  explique la règle, mais la ligne du palier ne suit pas (la fiche 6.14.165 annonce « 1 h de production (le reste en réserve du départ) »).
+  Captures `12-passe-palier1.png`, `13-passe-reclame.png`.
+- La ligne « Réserve du départ » dit « Versée dans 24 h » à la 31e minute comme à la 47e : arrondi à l'heure supérieure, sans heure précise.
+
+**🟡 NJ-34. L'objectif « Espionner un joueur » arrête la prise en main pour qui ne veut viser personne.**
+
+- À la 37e minute, l'objectif 7/10 demande de sonder un autre joueur. Je ne l'ai pas fait (consigne : aucun autre compte touché) ; la prise
+  en main reste bloquée et le Carnet ne prend pas le relais. Un vrai joueur timide est dans le même cas.
+- **Piste** : accepter une sonde vers un repaire ou une cible PNJ (Seigneurs, Menaces) pour cet objectif.
+
+Petit détail : comptoir à l'ouverture, « Tu recevras 1 Acier renforcé : brut 2 · taxe 1 », soit une taxe affichée de 50 % sur la quantité
+proposée par défaut (arrondi). Sans conséquence, mais surprenant.
+
+### Stocks mesurés (rythme humain)
+
+| Minute | Ferraille | Énergie | Nanocomposants | Données | Production (F / É / N / D par s) |
+|:--|--:|--:|--:|--:|:--|
+| 20 | 21 200 | 10 200 | 8 000 | 8 500 | 14 / 13 / 4 / 4 |
+| 40 | 73 400 | 70 100 | 94 100 | 29 100 | 54 / 15 / 9 / 9 |
+| 47 | 11 300 | 11 800 | 58 300 | 35 100 | 54 / 28 / 9 / 16 |
+
+Les stocks de 40 et 47 min comptent la prime du raid (64 500), le palier 1 plafonné (≈ 180 k) et deux échanges (≈ 64 k de ferraille en
+nano, puis 38 k de nano en ferraille). Sans le premier échange, le surplus de nanocomposants à 47 min serait d'environ 30 k ; le pic de
+309 k du deuxième passage a disparu.
+
+### Ressenti
+
+Le départ est bon et lisible : rien de bloquant jusqu'aux roquettes, le passe ne noie plus le compte, les boutons grisés disent ce qui manque.
+Les récits se marchent un peu dessus au raid, et le conseil de surplus pousse à des échanges inutiles.
+Vers 45 min, Labo plein et prise en main arrêtée sur l'espionnage d'un autre joueur : on attend des minuteries.
+
+**Prêt pour la mise en production : oui**, parce que les six corrections de S6 tiennent (sauf la cloche, mieux mais encore « 9+ » vers la
+30e minute) et que les nouveaux constats sont tous 🟡 (textes, ordre des récits, conseil de surplus), sans risque pour les données des
+joueurs ni pour l'équilibre ; NJ-32 mérite d'être corrigé dans le lot suivant.
