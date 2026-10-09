@@ -572,6 +572,16 @@ export function isTutorialRaid(player: Pick<PlayerState, "onboarding">, factionI
   return ob?.tutorialRaid === "sent" && (Number(st.raidsWon) || 0) + (Number(st.raidsLost) || 0) === 0;
 }
 
+/** 6.14.166 (S8, NJ-31) : raid d'initiation lancé mais pas encore résolu (ni gagné ni perdu contre sa faction). L'histoire du
+ *  chapitre suivant (« Le Silencieux a goûté à tes roquettes ») attend la fin du raid. */
+export function tutorialRaidPending(player: Pick<PlayerState, "onboarding" | "pirates">): boolean {
+  const ob = player.onboarding as { tutorialRaid?: string } | undefined;
+  if (ob?.tutorialRaid === "due") return true;
+  if (ob?.tutorialRaid !== "sent") return false;
+  const st = pirateState(player, TUTORIAL_RAID.factionId);
+  return (Number(st.raidsWon) || 0) + (Number(st.raidsLost) || 0) === 0;
+}
+
 function total(r: Partial<Record<ResourceId, number>>): number {
   return Object.values(r).reduce((a: number, b) => a + (b ?? 0), 0);
 }

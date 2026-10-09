@@ -43,10 +43,13 @@ export const EXCHANGE_RULES = {
    *  et affichés : la page disait « aucun échange commune ↔ commune » alors que le serveur l'acceptait). */
   commonToCommon: 1,
   rareToRare: 1,
-  /** 6.14.165 (RR-2) : conseil « Échange ton surplus » quand la ressource commune la plus fournie en a au moins
-   *  `surplusAdviceMin` et `surplusAdviceRatio` fois plus que la plus maigre (0 : jamais). */
-  surplusAdviceRatio: 4,
+  /** 6.14.166 (S8, NJ-32) : conseil « Échange ton surplus » quand une ressource commune manque pour la prochaine action utile
+   *  (stock sous son besoin) et qu'une autre a au moins `surplusAdviceRatio` fois son besoin et `surplusAdviceMin` de plus que
+   *  lui (0 : jamais). Avant (6.14.165) : stocks comparés entre eux, d'où des allers-retours taxés. */
+  surplusAdviceRatio: 2,
   surplusAdviceMin: 20_000,
+  /** 6.14.166 (S8, NJ-32) : pas de conseil inverse d'un échange commune → commune fait il y a moins de N minutes (0 : sans garde). */
+  surplusReverseMinutes: 60,
   /** 6.14.165 (RR-2) : le conseil ne s'affiche que les N premiers jours du compte (0 : toujours). Échanger tout le surplus
    *  toute la partie avance la 1re Ascension du profil moyen hors des bornes d'I29 (J17,8 → J14,8, simulé). */
   surplusAdviceDays: 3,
@@ -66,13 +69,20 @@ export const EXCHANGE_RULES_META = {
   commonToCommon: { label: "Comptoir : taux commune → commune", min: 0, max: 10, hint: "1 = une pour une (avant la taxe). 0 : échange fermé." },
   rareToRare: { label: "Comptoir : taux rare → rare", min: 0, max: 10, hint: "1 = une pour une (avant la taxe). 0 : échange fermé." },
   surplusAdviceRatio: {
-    label: "Conseil « surplus » : écart entre ressources communes",
+    label: "Conseil « surplus » : stock à vendre, en fois son besoin",
     unit: "×",
     min: 0,
     max: 1_000,
-    hint: "« Que faire maintenant ? » propose d'échanger quand la ressource commune la plus fournie en a N fois plus que la plus maigre. 0 : jamais.",
+    hint: "« Que faire maintenant ? » propose d'échanger quand une ressource commune manque pour la prochaine amélioration utile et qu'une autre a au moins N fois son propre besoin. 0 : jamais.",
   },
-  surplusAdviceMin: { label: "Conseil « surplus » : stock minimal de la ressource en trop", min: 0, max: 1_000_000_000_000 },
+  surplusAdviceMin: { label: "Conseil « surplus » : surplus minimal (stock moins besoin)", min: 0, max: 1_000_000_000_000 },
+  surplusReverseMinutes: {
+    label: "Conseil « surplus » : pas d'échange inverse avant",
+    unit: "min",
+    min: 0,
+    max: 10_080,
+    hint: "Après un échange commune → commune, le conseil ne propose pas l'échange inverse pendant ce temps. 0 : sans garde.",
+  },
   surplusAdviceDays: { label: "Conseil « surplus » : premiers jours du compte", unit: "j", min: 0, max: 365, hint: "Le conseil ne s'affiche que pendant ces jours. 0 : toujours." },
 };
 
@@ -82,6 +92,8 @@ export interface ExchangeWeekState {
   week: string;
   /** Ressources rares reçues au comptoir cette semaine (après taxe). */
   rares: number;
+  /** 6.14.166 (S8, NJ-32) : dernier échange commune → commune (le conseil « surplus » ne propose pas son inverse aussitôt). */
+  last?: { sell: ResourceId; buy: ResourceId; atMs: number } | null;
 }
 
 /** Rares déjà reçues au comptoir cette semaine (0 au changement de semaine). */
@@ -98,7 +110,20 @@ export function exchangeRareLeft(player: Pick<PlayerState, "exchangeWeek">, now:
 
 /** Compte `n` rares reçues au comptoir (remise à zéro au changement de semaine). */
 export function recordRareExchange(player: Pick<PlayerState, "exchangeWeek">, now: number, n: number): void {
-  player.exchangeWeek = { week: weekIdOf(now), rares: exchangeRareUsed(player, now) + Math.max(0, Math.floor(n)) };
+  const last = player.exchangeWeek?.last;
+  player.exchangeWeek = { week: weekIdOf(now), rares: exchangeRareUsed(player, now) + Math.max(0, Math.floor(n)), ...(last ? { last } : {}) };
+}
+
+/** 6.14.166 (S8, NJ-32) : garde le dernier échange commune → commune (sens et date), sans toucher au compteur des rares. */
+export function recordCommonExchange(player: Pick<PlayerState, "exchangeWeek">, now: number, sell: ResourceId, buy: ResourceId): void {
+  player.exchangeWeek = { week: weekIdOf(now), rares: exchangeRareUsed(player, now), last: { sell, buy, atMs: now } };
+}
+
+/** Le comptoir échange-t-il deux ressources communes dans ce sens ? */
+export function isCommonToCommon(sellId: ResourceId, buyId: ResourceId): boolean {
+  const sell = RESOURCE_LIST.find((r) => r.id === sellId);
+  const buy = RESOURCE_LIST.find((r) => r.id === buyId);
+  return sell?.rarity === "common" && buy?.rarity === "common" && sellId !== buyId;
 }
 
 /** Le comptoir donne-t-il des rares contre des communes dans ce sens ? */
@@ -128,23 +153,43 @@ export function getTradeRate(sellId: ResourceId, buyId: ResourceId): number {
   return Math.max(0, Number(EXCHANGE_RULES.rareToRare) || 0);
 }
 
-/** 6.14.165 (S6, NJ-26, RR-2) : surplus d'une ressource commune face à la plus maigre (conseil « Échange ton surplus »).
- *  `amount` : quantité à vendre pour égaliser les deux stocks (taxe comprise). Null : pas de surplus marqué. */
-export function commonSurplus(resources: Partial<Record<ResourceId, number>>): { sell: ResourceId; buy: ResourceId; amount: number } | null {
+/** 6.14.166 (S8, NJ-32) : conseil « Échange ton surplus ». `need` : besoin de chaque ressource commune pour la prochaine action
+ *  utile (`surplusNeeds`, nextActions.ts). On achète la ressource qui manque le plus (stock sous son besoin, en proportion) et on
+ *  vend celle qui a le plus de reste, si elle a au moins `surplusAdviceRatio` fois son besoin et `surplusAdviceMin` de plus que
+ *  lui. Quantité : juste de quoi combler le manque, sans passer sous le besoin de la ressource vendue. Jamais l'inverse de
+ *  `last` (dernier échange commune → commune) avant `surplusReverseMinutes`. Avant (6.14.165) : stocks comparés entre eux,
+ *  d'où « ferraille → nano » puis « nano → ferraille » dix minutes plus tard (deux taxes). */
+export function commonSurplus(
+  resources: Partial<Record<ResourceId, number>>,
+  need: Partial<Record<ResourceId, number>>,
+  opts: { last?: ExchangeWeekState["last"]; now?: number } = {},
+): { sell: ResourceId; buy: ResourceId; amount: number } | null {
   const ratio = Number(EXCHANGE_RULES.surplusAdviceRatio) || 0;
   const rate = Number(EXCHANGE_RULES.commonToCommon) || 0;
   if (!(ratio > 0) || !(rate > 0)) return null;
-  const commons = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => ({ id: r.id, n: Math.max(0, Math.floor(resources[r.id] ?? 0)) }));
-  if (commons.length < 2) return null;
-  const rich = commons.reduce((a, b) => (b.n > a.n ? b : a));
-  const poor = commons.reduce((a, b) => (b.n < a.n ? b : a));
-  if (rich.id === poor.id || rich.n < Math.max(0, Number(EXCHANGE_RULES.surplusAdviceMin) || 0) || rich.n < ratio * Math.max(1, poor.n)) return null;
-  // Vendre x : il reste rich − x, et l'autre reçoit x × taux × (1 − taxe) : les deux stocks se rejoignent.
   const net = rate * (1 - Math.max(0, Number(EXCHANGE_RULES.taxPct) || 0));
-  const amount = Math.floor((rich.n - poor.n) / (1 + net));
-  return amount > 0 ? { sell: rich.id, buy: poor.id, amount } : null;
+  if (!(net > 0)) return null;
+  const min = Math.max(0, Number(EXCHANGE_RULES.surplusAdviceMin) || 0);
+  const commons = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
+    const have = Math.max(0, Math.floor(resources[r.id] ?? 0));
+    const want = Math.max(0, Math.ceil(need[r.id] ?? 0));
+    return { id: r.id, have, want };
+  });
+  const short = commons.filter((c) => c.want > c.have).sort((a, b) => (b.want - b.have) / b.want - (a.want - a.have) / a.want);
+  const rich = commons.filter((c) => c.have - c.want >= min && c.have >= ratio * c.want).sort((a, b) => b.have - b.want - (a.have - a.want));
+  const reverseMs = Math.max(0, Number(EXCHANGE_RULES.surplusReverseMinutes) || 0) * 60_000;
+  const last = opts.last;
+  const recent = !!last && reverseMs > 0 && opts.now !== undefined && opts.now - (Number(last.atMs) || 0) < reverseMs;
+  for (const buy of short) {
+    for (const sell of rich) {
+      if (sell.id === buy.id) continue;
+      if (recent && last!.sell === buy.id && last!.buy === sell.id) continue;
+      const amount = Math.min(sell.have - sell.want, Math.ceil((buy.want - buy.have) / net));
+      if (amount > 0) return { sell: sell.id, buy: buy.id, amount };
+    }
+  }
+  return null;
 }
-
 
 /** Échange au comptoir : brut au taux, taxe (arrondie au supérieur), net reçu. 6.14.143 (PB-L2) : `taxCut`, points de taxe en moins
  *  (Négoce, palier 15 de l'entrepôt : `exchangeTaxCut(joueur)`), la taxe ne descend pas sous 0. */

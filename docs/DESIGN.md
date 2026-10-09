@@ -106,7 +106,9 @@ production, un compteur restent neutres ; le rang garde l'or (prestige).
   du jour) en `gold`, Léviathan en `violet` (événement), signalements à traiter en `ember` ; un compteur de lectures (messages,
   alliance, notes de version, bouton « Plus ») est neutre. Le rouge (`danger`) reste aux menaces : la cloche n'est rouge que pour une
   attaque subie ou un espion détecté non lus. Un groupe replié prend le ton le plus fort de ses pages ; les points (barre réduite,
-  liens du pied) suivent le même ton. Pastilles de 16 px, chiffre à 11 px.
+  liens du pied) suivent le même ton. Pastilles de 16 px, chiffre à 11 px. Le chiffre de la cloche ne compte pas la routine (fins
+  de chantier, de recherche, d'unités, de mission : un point seul, 6.14.165), et les succès comme les « Nouveau : … » comptent pour 1
+  chacun quel que soit leur nombre (`badgeCount`, 6.14.166).
 - **Ctrl+K** (6.14.86) : les actions faisables d'abord, les impossibles (ressources, prérequis) en fin de liste, grisées, la raison
   sous le libellé ; le niveau visé (« → niv. 3 ») reste visible, c'est le nom qui se tronque. Une forme d'icône par type de contenu,
   en accent (or pour une récompense à réclamer), `text-slate-500` si l'action est impossible.

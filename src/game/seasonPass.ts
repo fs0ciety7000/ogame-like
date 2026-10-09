@@ -574,6 +574,22 @@ export function describePassReward(r: PassReward, seasonId?: string): string {
   }
 }
 
+/** « 1 h », « 30 min », « 1,5 h ». */
+function hoursLabel(h: number): string {
+  const v = Math.max(0, Number(h) || 0);
+  if (v > 0 && v < 1) return `${Math.round(v * 60)} min`;
+  return `${String(Math.round(v * 100) / 100).replace(".", ",")} h`;
+}
+
+/** 6.14.166 (S8, NJ-33) : libellé d'une récompense pour ce joueur maintenant. Compte jeune : « 1 h de production maintenant,
+ *  1 h en réserve du départ » (avant : « 2 h de production » alors que 60 min seulement étaient versées). */
+export function describePassRewardFor(r: PassReward, seasonId: string | undefined, player: Pick<PlayerState, "createdAtMs">, now: number): string {
+  if (r.kind !== "production") return describePassReward(r, seasonId);
+  const capped = youngRewardHours(player, r.hours, now);
+  if (capped >= r.hours) return describePassReward(r, seasonId);
+  return `${hoursLabel(capped)} de production maintenant, ${hoursLabel(r.hours - capped)} en réserve du départ`;
+}
+
 const RARITY_LABELS: Record<RelicRarity, string> = { common: "commune", rare: "rare", epic: "épique", legendary: "légendaire", mythic: "mythique" };
 
 /** Applique une récompense de passe (paliers, épisodes et chapitres). Renvoie son libellé. */
@@ -582,8 +598,7 @@ export function grantPassReward(player: PlayerState, r: PassReward, seasonId: st
     // 6.14.165 (S6, NJ-25) : compte jeune : au plus `startRewards.youngCapMinutes` de production, le reste en réserve du départ.
     const paid = productionReward(player, r.hours, now);
     for (const [res, n] of Object.entries(paid) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
-    const capped = youngRewardHours(player, r.hours, now);
-    return capped < r.hours ? `${describePassReward({ kind: "production", hours: capped })} (le reste en réserve du départ)` : describePassReward(r);
+    return describePassRewardFor(r, undefined, player, now);
   }
   if (r.kind === "amber") {
     const b = bountyState(player);

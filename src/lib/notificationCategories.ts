@@ -26,6 +26,27 @@ export function countsInBadge(kind: NotificationKind): boolean {
   return !ROUTINE_KINDS.includes(kind);
 }
 
+/** 6.14.166 (S8, reste de NJ-30) : les succès et les ouvertures de pages (« Nouveau : … ») arrivent en rafale le premier jour
+ *  (« 9+ » à la 31e minute, surtout eux) : chaque famille ne compte que pour 1 dans le chiffre, quel que soit leur nombre. */
+function badgeFamily(n: { kind: NotificationKind; title?: string }): string | null {
+  if (n.kind === "achievement") return "achievement";
+  if (n.kind === "system" && (n.title ?? "").startsWith("Nouveau : ")) return "nav";
+  return null;
+}
+
+/** Chiffre de la cloche : non lues hors routine, succès et « Nouveau : … » regroupés (1 chacun). */
+export function badgeCount(items: { kind: NotificationKind; title?: string; read?: boolean }[]): number {
+  let n = 0;
+  const families = new Set<string>();
+  for (const it of items) {
+    if (it.read || !countsInBadge(it.kind)) continue;
+    const fam = badgeFamily(it);
+    if (fam) families.add(fam);
+    else n += 1;
+  }
+  return n + families.size;
+}
+
 /** Alertes qui gardent toujours leur propre toast, même en rafale. */
 export const URGENT_KINDS: NotificationKind[] = ["combat-defender", "spy-detected", "fleet", "season"];
 

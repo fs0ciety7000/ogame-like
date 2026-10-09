@@ -20,7 +20,7 @@ import { Factory } from "lucide-react";
 import type { PlayerState } from "@/types/game";
 import { HudCallout, HudMeter } from "@/components/ui/hud";
 import { EXCHANGE_RULES, exchangeCapLabel, exchangeRareLeft, exchangeRareUsed, isCommonToRare, RESOURCE_LIST, tradeQuote } from "@/game/resources";
-import { formatDecimal } from "@/game/format";
+import { formatDecimal, formatPct } from "@/game/format";
 import { GameActionError, tradeResources } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { formatCompact, formatNumber } from "@/lib/utils";
@@ -50,10 +50,14 @@ export function ResourcesPage() {
   // 6.14.164 (S4, NJ-20) : la quantité par défaut (100) donnait « Tu recevras 0 » (100 ferraille → 1 acier, moins 1 de taxe) :
   // à chaque paire choisie, la quantité monte au minimum qui rapporte au moins 1.
   const taxCut = player ? exchangeTaxCut(player) : 0;
+  // 6.14.166 (S8) : à l'ouverture, « brut 2 · taxe 1 » (50 % affichés par l'arrondi au-dessus) : une quantité dont la taxe
+  // arrondie s'écarte de plus d'un point du taux monte à la quantité « juste » (brut 100 au moins), dans la limite du stock.
+  const stock = Math.floor(resources?.[sellId] ?? 0);
   useEffect(() => {
-    if (sellId === buyId) return;
-    setAmount((a) => (tradeQuote(sellId, buyId, a, taxCut).net >= 1 ? a : minTradeAmount(sellId, buyId, taxCut)));
-  }, [sellId, buyId, taxCut]);
+    if (sellId === buyId || !ready) return;
+    setAmount((a) => (tradeQuote(sellId, buyId, a, taxCut).net >= 1 && taxFair(sellId, buyId, a, taxCut) ? a : defaultTradeAmount(sellId, buyId, taxCut, stock)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- la quantité se règle au choix de la paire (et au chargement), pas à chaque tic du stock
+  }, [sellId, buyId, taxCut, ready]);
 
   if (!resources || !player) return null;
   const economy = economySnapshot({ ...player, resources }, Date.now());
@@ -188,7 +192,7 @@ export function ResourcesPage() {
               </span>
               {quote.tax > 0 && (
                 <span className="font-mono text-[11px] tabular-nums text-slate-500">
-                  brut {formatNumber(quote.gross)} · taxe {formatNumber(quote.tax)} au pot commun
+                  brut {formatNumber(quote.gross)} · taxe {formatPct(quote.taxPct, 1)} : {formatNumber(quote.tax)} au pot commun
                 </span>
               )}
             </span>
@@ -221,6 +225,27 @@ function pairRateText(kind: "commune" | "rare", rate: number): string {
   if (!(rate > 0)) return `Aucun échange ${kind} ↔ ${kind}.`;
   const label = kind === "commune" ? "Commune ↔ commune" : "Rare ↔ rare";
   return rate === 1 ? `${label} : 1 pour 1.` : `${label} : ${formatDecimal(rate, 2)} pour 1.`;
+}
+
+/** 6.14.166 (S8) : la taxe arrondie (au supérieur) reste-t-elle à un point du taux affiché ? */
+function taxFair(sellId: ResourceId, buyId: ResourceId, amount: number, taxCut: number): boolean {
+  const q = tradeQuote(sellId, buyId, amount, taxCut);
+  return q.gross > 0 && q.tax / q.gross - q.taxPct <= 0.01;
+}
+
+/** 6.14.166 (S8) : quantité proposée : la plus petite qui donne un brut de 100 (taxe affichée juste), dans la limite du stock,
+ *  et jamais sous le minimum qui rapporte 1. */
+function defaultTradeAmount(sellId: ResourceId, buyId: ResourceId, taxCut: number, stock: number): number {
+  const min = minTradeAmount(sellId, buyId, taxCut);
+  let fair = 1;
+  while (tradeQuote(sellId, buyId, fair, taxCut).gross < 100 && fair < 1e12) fair *= 2;
+  let lo = Math.max(1, Math.floor(fair / 2));
+  while (lo < fair) {
+    const mid = Math.floor((lo + fair) / 2);
+    if (tradeQuote(sellId, buyId, mid, taxCut).gross >= 100) fair = mid;
+    else lo = mid + 1;
+  }
+  return Math.max(min, Math.min(fair, Math.max(0, stock)));
 }
 
 /** 6.14.164 (S4, NJ-20) : plus petite quantité vendue qui rapporte au moins 1 (taxe comprise), même calcul que le serveur. */

@@ -11,7 +11,7 @@ import { isYoungAccount, START_REWARD_RULES } from "@/game/startRewards";
 import { formatHours } from "@/game/format";
 import { ObjectiveGoLink } from "@/components/game/ObjectiveGoLink";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { activePass, describePassReward, isCumulativePass, objectiveLabel, PASS_POINTS, passBonusProgress, passPrestigeProgress, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
+import { activePass, describePassReward, describePassRewardFor, isCumulativePass, objectiveLabel, PASS_POINTS, passBonusProgress, passPrestigeProgress, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
 import { publishedPassSeason, type PassSeason } from "@/game/passSeasons";
 import { findCommander, type CommanderDef } from "@/game/commanders";
 import { STORY_SPEAKERS } from "@/game/story";
@@ -222,7 +222,7 @@ export function SeasonPassPage() {
                 {rewards.map((r, k) => (
                   <div key={k} className="flex items-center gap-2 text-xs text-slate-200">
                     <img src={assetUrl(rewardIcon(r))} alt="" className="h-7 w-7 shrink-0 object-contain" />
-                    <span>{describePassReward(r, st.seasonId)}</span>
+                    <span>{describePassRewardFor(r, st.seasonId, player, now)}</span>
                   </div>
                 ))}
               </div>
@@ -259,11 +259,11 @@ export function SeasonPassPage() {
           node: (
             <span className="inline-flex items-center gap-2 text-xs text-slate-100">
               <img src={assetUrl(rewardIcon(r))} alt="" className="h-6 w-6 shrink-0 object-contain" />
-              {describePassReward(r, st.seasonId)}
+              {describePassRewardFor(r, st.seasonId, player, now)}
             </span>
           ),
         }))}
-        reel={revealedRewards.length > 0 ? { items: reelItems.map((it, i) => (i === reelTarget ? { ...it, label: describePassReward(revealedRewards[0], st.seasonId) } : it)), target: reelTarget } : undefined}
+        reel={revealedRewards.length > 0 ? { items: reelItems.map((it, i) => (i === reelTarget ? { ...it, label: describePassRewardFor(revealedRewards[0], st.seasonId, player, now) } : it)), target: reelTarget } : undefined}
       />
       <p className="text-xs text-slate-500">
         Palier {tiers} : {pass.tiers[tiers - 1].map((r) => describePassReward(r, st.seasonId)).join(", ")}. Le titre « {passTitle(st.seasonId)} » et la bannière de la saison sont gardés pour toujours.

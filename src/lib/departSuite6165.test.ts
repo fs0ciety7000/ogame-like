@@ -49,16 +49,20 @@ describe("NJ-26 (RR-2) : surplus de nanocomposants et de données", () => {
   });
 
   it("surplus repéré (parcours joué, 45e minute : 309 k de nano pour 13 k de ferraille) et conseil « Échange ton surplus »", () => {
-    const s = commonSurplus({ scrap: 13_300, energy: 74_000, nano: 309_000, data: 205_000 })!;
+    // 6.14.166 (S8, NJ-32) : chaque stock est comparé à son besoin (prochaines améliorations), plus aux autres stocks.
+    const need = { scrap: 60_000, energy: 30_000 };
+    const s = commonSurplus({ scrap: 13_300, energy: 74_000, nano: 309_000, data: 205_000 }, need)!;
     expect(s.sell).toBe("nano");
     expect(s.buy).toBe("scrap");
-    // Les deux stocks se rejoignent après l'échange, taxe comprise.
+    // Juste de quoi atteindre le besoin de ferraille, taxe comprise.
     const net = tradeQuote(s.sell, s.buy, s.amount).net;
-    expect(Math.abs(309_000 - s.amount - (13_300 + net))).toBeLessThan(5);
-    // Pas de conseil sans écart marqué, ni sous le minimum.
-    expect(commonSurplus({ scrap: 50_000, energy: 40_000, nano: 60_000, data: 55_000 })).toBeNull();
-    expect(commonSurplus({ scrap: 100, energy: 100, nano: 10_000, data: 100 })).toBeNull();
+    expect(13_300 + net).toBeGreaterThanOrEqual(60_000);
+    expect(13_300 + net).toBeLessThan(60_002);
+    // Pas de conseil sans manque, ni sous le minimum.
+    expect(commonSurplus({ scrap: 50_000, energy: 40_000, nano: 60_000, data: 55_000 }, { scrap: 40_000, energy: 30_000 })).toBeNull();
+    expect(commonSurplus({ scrap: 100, energy: 100, nano: 10_000, data: 100 }, need)).toBeNull();
     const p = newcomer({ scrap: 13_300, energy: 74_000, nano: 309_000, data: 205_000 });
+    p.buildings.extracteur_ferraille.level = 8;
     const card = nextActions(p, null, [], NOW).find((a) => a.kind === "surplus");
     expect(card?.title).toBe("Échange ton surplus");
     expect(card?.text).toContain("Trop de nanocomposants");

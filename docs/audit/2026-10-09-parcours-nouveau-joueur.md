@@ -479,7 +479,7 @@ et il est plus court : les minuteries de 2 à 3 min laissent toujours un bâtime
 | NJ-27 | S6 | **Tient** | Atelier de réparation et Labo de synthèse : « Débloquer » grisé, pastilles « manque 20 », « Il manque : 20 Module cybernétique, 20 Nanites synthétiques. Échange-les au comptoir. » (`16-debloquer.png`). |
 | NJ-28 | S6 | **Tient** | 4 rares sur leur ligne, de 16 à 359 px, aucun chiffre coupé, `scrollWidth` 375 (`17-entete.png`). |
 | NJ-29 | S6 | **Tient** | Rapport « Attaque du Silencieux (Confrérie du Vide) », Journal « Raid repoussé : Confrérie du Vide ». La présentation du Silencieux par Vashka est dans le texte du chapitre 2 (`story.ts`), je ne l'ai pas lue à l'écran (pages passées vite). Ordre des récits : NJ-31. |
-| NJ-30 | S6 | **Tient en partie** | Chiffre 3 à la 10e minute (au lieu de « 9+ » à la 8e) ; les fins de chantier ne comptent plus. **Mais** « 9+ » dès la 31e minute : 10 « importantes » sur 28, surtout des succès et des « Nouveau : … » (`11-cloche-9plus.png`). Mieux que 53 à la 35e minute, mais la pastille sature encore dans la première heure. |
+| NJ-30 | S6 | **Tient en partie** | Chiffre 3 à la 10e minute (au lieu de « 9+ » à la 8e) ; les fins de chantier ne comptent plus. **Mais** « 9+ » dès la 31e minute : 10 « importantes » sur 28, surtout des succès et des « Nouveau : … » (`11-cloche-9plus.png`). Mieux que 53 à la 35e minute, mais la pastille sature encore dans la première heure. **Reste corrigé en 6.14.166 (S8)** : succès et « Nouveau : … » comptent pour 1 chacun (`badgeCount`). |
 | NJ-1, NJ-2 | S1 | **Tient** | Acier donné par l'objectif 3, recherche Drone sans détour ; histoire du chapitre 2 puis alerte. |
 | NJ-3 | S2 | **Tient** | Labo en liste à 375 px, « Il manque : Analyse de matériaux niv. 3 (tu as 1) ». |
 | NJ-4 | S3 | **Tient** | Prime du raid : 48 600 ferraille = 30 min à 27/s ; série J1 : 7 200 ferraille. |
@@ -497,6 +497,7 @@ et il est plus court : les minuteries de 2 à 3 min laissent toujours un bâtime
   même étape avec `TUTORIAL_RAID.delayMinutes` = 2 (`src/game/story.ts`).
 - **Piste** : n'afficher l'intro du chapitre 3 qu'après le rapport du raid (ou réécrire sa première ligne au futur : « Le Silencieux arrive.
   Tes roquettes vont parler. »).
+- **État** : Corrigé en 6.14.166 (S8) : l'intro du chapitre 3 attend que le raid d'initiation soit résolu (`tutorialRaidPending`, `StoryDialog.tsx`).
 
 **🟡 NJ-32. Le conseil « Échange ton surplus » fait faire un aller-retour taxé.**
 
@@ -508,6 +509,7 @@ et il est plus court : les minuteries de 2 à 3 min laissent toujours un bâtime
   après une prime n'est pas un surplus.
 - **Piste** : ne jamais proposer de vendre la ferraille (ou la ressource la plus demandée par les prochains coûts) ; ou comparer chaque stock
   au coût des prochaines améliorations, pas aux autres stocks.
+- **État** : Corrigé en 6.14.166 (S8) : chaque stock comparé à son besoin (niveau suivant des bâtiments de production, file planifiée, objectif en cours) ; échange seulement sur un vrai manque et un vrai surplus, juste de quoi combler le manque ; jamais l'inverse d'un échange de moins de 60 min (`exchange.surplusReverseMinutes`).
 
 **🟡 NJ-33. Le palier du passe annonce toujours « 2 h de production ».**
 
@@ -515,15 +517,18 @@ et il est plus court : les minuteries de 2 à 3 min laissent toujours un bâtime
   explique la règle, mais la ligne du palier ne suit pas (la fiche 6.14.165 annonce « 1 h de production (le reste en réserve du départ) »).
   Captures `12-passe-palier1.png`, `13-passe-reclame.png`.
 - La ligne « Réserve du départ » dit « Versée dans 24 h » à la 31e minute comme à la 47e : arrondi à l'heure supérieure, sans heure précise.
+- **État** : Corrigé en 6.14.166 (S8) : « 1 h de production maintenant, 1 h en réserve du départ » ; « Versée dans 23 h 29 min », à la minute.
 
 **🟡 NJ-34. L'objectif « Espionner un joueur » arrête la prise en main pour qui ne veut viser personne.**
 
 - À la 37e minute, l'objectif 7/10 demande de sonder un autre joueur. Je ne l'ai pas fait (consigne : aucun autre compte touché) ; la prise
   en main reste bloquée et le Carnet ne prend pas le relais. Un vrai joueur timide est dans le même cas.
 - **Piste** : accepter une sonde vers un repaire ou une cible PNJ (Seigneurs, Menaces) pour cet objectif.
+- **État** : Corrigé en 6.14.166 (S8) : une sonde vers un Seigneur de guerre comptait déjà (`stats.spies`) ; l'objectif s'appelle « Espionner un joueur ou un Seigneur » et son aide le dit (badge PNJ, en orange sur la carte ; espionner ne lève pas la protection).
 
 Petit détail : comptoir à l'ouverture, « Tu recevras 1 Acier renforcé : brut 2 · taxe 1 », soit une taxe affichée de 50 % sur la quantité
-proposée par défaut (arrondi). Sans conséquence, mais surprenant.
+proposée par défaut (arrondi). Sans conséquence, mais surprenant. **Corrigé en 6.14.166 (S8)** : taxe affichée en pourcentage
+(« taxe 5 % : 5 ») et quantité proposée à brut 100 au moins (dans la limite du stock).
 
 ### Stocks mesurés (rythme humain)
 

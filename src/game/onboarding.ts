@@ -71,7 +71,7 @@ export const ONBOARDING_REWARDS_META = {
   mission: { label: "Objectif 5 : première mission", hint: REWARD_HINT },
   storage2: { label: "Objectif 6 : entrepôt niveau 2", hint: REWARD_HINT },
   rockets10: { label: "Objectif 7 : 10 roquettes", hint: REWARD_HINT },
-  spy: { label: "Objectif 8 : espionner un joueur", hint: REWARD_HINT },
+  spy: { label: "Objectif 8 : espionner un joueur ou un Seigneur", hint: REWARD_HINT },
   alliance: { label: "Objectif 9 : alliance", hint: REWARD_HINT },
   rank: { label: "Objectif 10 : rang Fer II", hint: REWARD_HINT },
 };
@@ -151,8 +151,10 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: "spy",
-    label: "Espionner un joueur",
-    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
+    // 6.14.166 (S8, NJ-34) : un Seigneur de guerre (PNJ) compte aussi (`stats.spies`, toute sonde lancée) : le texte le dit, pour qui
+    // ne veut viser aucun joueur. Espionner ne lève pas la protection débutant.
+    label: "Espionner un joueur ou un Seigneur",
+    hint: "Envoie une sonde depuis la Galaxie. Tu ne veux viser personne ? Sonde un Seigneur de guerre (badge PNJ, en orange sur la carte). Espionner ne lève pas ta protection.",
     to: "/game/galaxie",
     get reward() {
       return ONBOARDING_REWARDS.spy;

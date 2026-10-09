@@ -53,3 +53,8 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q417 | Échange commune ↔ commune au comptoir gardé à 1 pour 1 (taxe 5 %), conseil « Échange ton surplus » limité aux 3 premiers jours (I29 tenu) (`docs/changes/6.14.165-depart-suite.md`) | valider |
 | Q418 | Fins de chantier, recherche, unités et mission hors du chiffre de la cloche (un point les signale) (`docs/changes/6.14.165-depart-suite.md`) | valider |
 | Q419 | Réserve du départ versée en entier à 24 h plutôt que par tranches (`docs/changes/6.14.165-depart-suite.md`) | valider |
+| Q420 | Conseil « Échange ton surplus » : besoin = plus gros coût entre le niveau suivant des bâtiments de production, la file planifiée et l'objectif en cours ; surplus = 2 fois le besoin + 20 000 ; échange inverse bloqué 60 min (`exchange.surplusReverseMinutes`) (`docs/changes/6.14.166-derniers-reglages.md`) | valider |
+| Q421 | Histoire du chapitre 3 retenue jusqu'à la fin du raid d'initiation (plutôt que sa première ligne réécrite au futur) (`docs/changes/6.14.166-derniers-reglages.md`) | valider |
+| Q422 | Objectif d'espionnage : seul le texte bloquait (un Seigneur comptait déjà) ; renommé « Espionner un joueur ou un Seigneur » (`docs/changes/6.14.166-derniers-reglages.md`) | valider |
+| Q423 | Cloche : succès et « Nouveau : … » regroupés (1 chacun) pour tous les comptes (`docs/changes/6.14.166-derniers-reglages.md`) | valider |
+| Q424 | Comptoir : quantité par défaut qui donne un brut d'au moins 100, taxe affichée en pourcentage (`docs/changes/6.14.166-derniers-reglages.md`) | valider |

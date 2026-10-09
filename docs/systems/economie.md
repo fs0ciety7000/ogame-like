@@ -81,9 +81,16 @@ mise, comptoir, butin, tribut, stock de colonie) restent à part, listés dans l
 ## 6.14.165 (lot S6, RR-2, NJ-26) : surplus de nanocomposants et de données
 - Le comptoir acceptait déjà l'échange commune ↔ commune (et rare ↔ rare) à 1 pour 1 avant la taxe, mais la page disait le contraire.
   Taux désormais réglables et affichés : `exchange.commonToCommon`, `exchange.rareToRare` (0 ferme l'échange, refusé au serveur).
-- Conseil « Échange ton surplus » dans « Que faire maintenant ? » : la commune la plus fournie en a ≥ `surplusAdviceRatio` (4) fois la
-  plus maigre et ≥ `surplusAdviceMin` (20 000), entrepôt non plein, pendant les `surplusAdviceDays` (3) premiers jours ; il propose la
-  quantité qui égalise les deux stocks (taxe comprise) et ouvre le comptoir prérempli (`?vendre=…&recevoir=…&quantite=…`).
+- Conseil « Échange ton surplus » dans « Que faire maintenant ? » (règle de 6.14.166, S8, NJ-32) : chaque commune est comparée à son
+  **besoin**, le plus gros coût parmi le niveau suivant de chaque bâtiment de production débloqué (après le chantier en cours), la file
+  planifiée et l'objectif de prise en main en cours (`surplusNeeds`, `nextActions.ts`). Il faut une commune sous son besoin et une autre
+  à ≥ `surplusAdviceRatio` (2) fois son besoin et ≥ `surplusAdviceMin` (20 000) au-dessus ; la quantité comble juste le manque (taxe
+  comprise) sans passer la vendue sous son besoin ; jamais l'inverse d'un échange commune → commune fait il y a moins de
+  `surplusReverseMinutes` (60) min (gardé dans `exchangeWeek.last`). Entrepôt non plein, `surplusAdviceDays` (3) premiers jours ;
+  comptoir prérempli (`?vendre=…&recevoir=…&quantite=…`). Avant (6.14.165) : stocks comparés entre eux, d'où un aller-retour taxé
+  (ferraille → nano à la 32e minute, nano → ferraille à la 42e).
+- Comptoir (6.14.166) : la taxe s'affiche en pourcentage (« taxe 5 % : 5 ») ; la quantité proposée donne un brut d'au moins 100
+  (dans la limite du stock), pour que la taxe arrondie au-dessus reste à un point du taux (avant : « brut 2 · taxe 1 »).
 - Limité aux premiers jours : échanger tout le surplus toute la partie avance la 1re Ascension du profil moyen hors d'I29 (J14,8).
   Simulateur : `--surplus` (`docs/proposals/recompenses-du-depart.md` §10).
 - Récompenses en heures d'un compte de moins de 24 h plafonnées à 60 min, reste en réserve du départ : voir `progression.md`.

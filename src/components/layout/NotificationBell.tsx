@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigg
 import { setBellOpen, useNotificationStore } from "@/store/notificationStore";
 import { markNotificationRead } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
-import { countsInBadge, groupNotifications, inCategory, NOTIFICATION_CATEGORIES, notificationLink, type NotificationCategory } from "@/lib/notificationCategories";
+import { badgeCount, groupNotifications, inCategory, NOTIFICATION_CATEGORIES, notificationLink, type NotificationCategory } from "@/lib/notificationCategories";
 import { cn } from "@/lib/utils";
 import { NotificationCard } from "@/components/game/NotificationCard";
 import { Pager, usePaged } from "@/components/ui/panel";
@@ -23,7 +23,8 @@ export function NotificationBell() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
   // 6.14.165 (S6, NJ-30) : le chiffre ne compte que ce qui compte ; la routine (chantiers, recherches, missions) met un point.
-  const unreadImportant = useMemo(() => items.filter((n) => !n.read && countsInBadge(n.kind)).length, [items]);
+  // 6.14.166 (S8, reste de NJ-30) : succès et « Nouveau : … » regroupés (1 chacun dans le chiffre).
+  const unreadImportant = useMemo(() => badgeCount(items), [items]);
   const hasUrgentUnread = useMemo(
     () => items.some((n) => !n.read && (n.kind === "combat-defender" || n.kind === "spy-detected")),
     [items],

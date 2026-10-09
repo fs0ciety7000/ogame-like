@@ -11,6 +11,7 @@ import { useAnnouncementPending } from "@/components/game/Announcement";
 import type { PlayerState } from "@/types/game";
 import { coalitionPhase, coalitionScene, type Coalition } from "@/game/coalition";
 import { findWarlord } from "@/game/warlords";
+import { tutorialRaidPending } from "@/game/pirates";
 import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
 import { markAnnouncementsSeen } from "@/services/playerService";
 import { useExclusiveModal } from "@/store/modalSlotStore";
@@ -45,6 +46,8 @@ function pendingScene(player: PlayerState, seen: string[]): { id: string; title:
   if (!onboardingEligible(player) || st.hidden) return null;
   if (st.tutorialRaid === "sent" && !seen.includes("raid")) return { id: "raid", title: "Alerte · La Confrérie attaque", lines: RAID_LINES };
   const ch = chapterOf(st.claimed);
+  // 6.14.166 (S8, NJ-31) : « Le Silencieux a goûté à tes roquettes » attend la fin du raid d'initiation (avant : 2 min trop tôt).
+  if (ch && tutorialRaidPending(player)) return null;
   if (ch && !seen.includes(`chapter-${ch.id}`)) return { id: `chapter-${ch.id}`, title: `Chapitre ${ch.id} · ${ch.title}`, lines: ch.intro };
   return null;
 }

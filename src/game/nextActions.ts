@@ -1,6 +1,9 @@
 import { formatInt, formatShort } from "@/game/format";
 import { atelierLevel, hullPercent, workshopRushCost, workshopUnits } from "@/game/workshop";
-import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
+import { applyBuildingDiscount, BUILDINGS, effectiveBuildingLevel, findBuilding, getBuildingUpgradeCost } from "@/game/buildings";
+import { playerBuildingDiscount } from "@/game/bonuses";
+import { findUnit } from "@/game/units";
+import { ONBOARDING_STEPS, onboardingEligible, onboardingState } from "@/game/onboarding";
 import { economySnapshot } from "@/game/economy";
 import { RESEARCH_RULES } from "@/game/technologies";
 import { OFFENSIVE_UNITS } from "@/game/units";
@@ -9,7 +12,7 @@ import { BOUNTY_RULES, bountyState, viewBounties } from "@/game/bounties";
 import type { Fleet } from "@/game/fleets";
 import { navPageOpen, navPath } from "@/game/navUnlock";
 import { prestigeBlocker } from "@/game/prestige";
-import type { PlayerState, QueuesState } from "@/types/game";
+import type { PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /* =====================================================
    « Que faire maintenant ? » (v3.8) : ce qui attend le joueur, du plus
@@ -26,6 +29,46 @@ export interface NextAction {
   to: string;
   /** 0 = le plus urgent. */
   priority: number;
+}
+
+/** 6.14.166 (S8, NJ-32) : besoin de chaque ressource (le plus gros coût) pour les prochaines actions utiles : niveau suivant de
+ *  chaque bâtiment de production débloqué (après le chantier en cours), améliorations de la file planifiée, et objectif de prise
+ *  en main en cours (bâtiment ou unités visés par son lien `?focus=`). Le conseil « Échange ton surplus » compare chaque stock à
+ *  ce besoin, plus aux autres stocks. */
+export function surplusNeeds(player: PlayerState, queues: QueuesState | null): Partial<Record<ResourceId, number>> {
+  const need: Partial<Record<ResourceId, number>> = {};
+  const add = (cost: Partial<Record<string, number>> | undefined, times = 1) => {
+    for (const [res, v] of Object.entries(cost ?? {})) {
+      const n = Math.max(0, Number(v) || 0) * times;
+      if (n > (need[res as ResourceId] ?? 0)) need[res as ResourceId] = n;
+    }
+  };
+  const discount = playerBuildingDiscount(player);
+  const nextCost = (id: string, extra = 0) => {
+    const b = findBuilding(id);
+    if (!b || !player.buildings?.[id]?.unlocked) return undefined;
+    const upgrading = queues?.buildingUpgrades?.[id] ? 1 : 0;
+    const level = effectiveBuildingLevel(player.buildings, id) + 1 + upgrading + extra;
+    return level <= b.maxLevel ? applyBuildingDiscount(getBuildingUpgradeCost(b, level), discount) : undefined;
+  };
+  for (const b of BUILDINGS) if (b.production) add(nextCost(b.id));
+  for (const plan of queues?.buildPlan ?? []) {
+    const b = findBuilding(plan.buildingId);
+    if (b && plan.level <= b.maxLevel) add(applyBuildingDiscount(getBuildingUpgradeCost(b, plan.level), discount));
+  }
+  if (onboardingEligible(player)) {
+    const claimed = onboardingState(player).claimed;
+    const step = ONBOARDING_STEPS.find((s) => !claimed.includes(s.id) && !s.done(player));
+    const focus = step ? /[?&]focus=([0-9A-Za-z_-]+)/.exec(step.to)?.[1] : undefined;
+    if (focus && findBuilding(focus)) add(nextCost(focus));
+    else if (focus && findUnit(focus)) {
+      // « Installer 10 roquettes » : le coût des unités qui manquent encore (au plus 10).
+      const target = /\b(\d+)\b/.exec(step!.label)?.[1];
+      const missing = Math.max(1, Math.min(10, (Number(target) || 1) - (player.units?.[focus]?.count ?? 0)));
+      add(findUnit(focus)!.cost, missing);
+    }
+  }
+  return need;
 }
 
 export function nextActions(player: PlayerState, queues: QueuesState | null, fleets: Fleet[], now: number): NextAction[] {
@@ -51,7 +94,7 @@ export function nextActions(player: PlayerState, queues: QueuesState | null, fle
   // 6.14.165 (S6, NJ-26, RR-2) : une ressource commune dort pendant qu'une autre manque : le comptoir les échange.
   const adviceDays = Math.max(0, Number(EXCHANGE_RULES.surplusAdviceDays) || 0);
   const early = adviceDays === 0 || (!!player.createdAtMs && now - player.createdAtMs < adviceDays * 86_400_000);
-  const surplus = economy.full.length === 0 && early ? commonSurplus(player.resources) : null;
+  const surplus = economy.full.length === 0 && early ? commonSurplus(player.resources, surplusNeeds(player, queues), { last: player.exchangeWeek?.last, now }) : null;
   if (surplus) {
     // « de ferraille », « d'énergie instable » (élision devant une voyelle).
     const de = (id: string) => {

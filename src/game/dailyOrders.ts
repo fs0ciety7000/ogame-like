@@ -43,6 +43,15 @@ export interface OrdersContext {
   claims?: ClaimContext;
 }
 
+/** 6.14.166 (S8, NJ-33) : temps restant avant la réserve du départ, à la minute (« 23 h 29 min », « 12 min ») ; avant : heure
+ *  arrondie au-dessus (« 24 h » à la 31e minute comme à la 47e). La page des Ordres du jour se redessine avec `useNowTicker`. */
+function reserveLeftLabel(ms: number): string {
+  const min = Math.max(1, Math.ceil(Math.max(0, ms) / 60_000));
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? (m > 0 ? `${h} h ${m} min` : `${h} h`) : `${m} min`;
+}
+
 /** Ordres du jour, dans l'ordre de la journée. Lecture seule. */
 export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext = {}): DailyOrder[] {
   const claims = pendingClaims(player, now, undefined, ctx.claims);
@@ -75,7 +84,7 @@ export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext
       detail:
         rReady > 0
           ? `${describeGain(player.startReserve ?? {})} t'attendent.`
-          : `La part de tes récompenses au-delà de ${formatInt(START_REWARD_RULES.youngCapMinutes)} min de production, gardée pour toi. Versée dans ${Math.max(1, Math.ceil(((at ?? now) - now) / 3_600_000))} h.`,
+          : `La part de tes récompenses au-delà de ${formatInt(START_REWARD_RULES.youngCapMinutes)} min de production, gardée pour toi. Versée dans ${reserveLeftLabel((at ?? now) - now)}.`,
       link: "/game/ordres",
       ready: rReady,
     });

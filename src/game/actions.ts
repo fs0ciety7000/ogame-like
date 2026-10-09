@@ -34,7 +34,7 @@ import {
 } from "@/game/buildings";
 import { flushState, grantNewAchievements, type NewNotification } from "@/game/flush";
 import { challengeTokens, claimDailyTokens, grantTokens, playerCasino, tokensLabel } from "@/game/casino";
-import { EXCHANGE_RULES, exchangeRareLeft, getTradeRate, isCommonToRare, recordRareExchange, RESOURCE_LIST, tradeQuote } from "@/game/resources";
+import { EXCHANGE_RULES, exchangeRareLeft, getTradeRate, isCommonToCommon, isCommonToRare, recordCommonExchange, recordRareExchange, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { RESEARCH_RULES, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, ownedBlueprints, scaleUnitCost } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
@@ -398,6 +398,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       player.resources[sellId] -= amount;
       player.resources[buyId] = (player.resources[buyId] ?? 0) + quote.net;
       if (rareTrade) recordRareExchange(player, now, quote.net);
+      // 6.14.166 (S8, NJ-32) : sens et date du dernier échange commune → commune (pas de conseil inverse aussitôt).
+      else if (isCommonToCommon(sellId, buyId)) recordCommonExchange(player, now, sellId, buyId);
       bumpStat(player, "traded", amount);
       grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
       return { gained: quote.net, tax: quote.tax, taxRes: buyId };

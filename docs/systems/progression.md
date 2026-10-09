@@ -297,3 +297,9 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
   `startRewards.youngCapMinutes` (60) de production au versement. La différence va à la **réserve du départ** (`startReserve`), versée
   par « Tout réclamer » dès 24 h (ligne des Ordres du jour). Palier 1 du passe au parcours joué : 921 600 → ≈ 460 800, autant en
   réserve. Invariant I50 étendu ; proposition §9 ; fiche `docs/changes/6.14.165-depart-suite.md`.
+- Affichage (6.14.166, S8, NJ-33) : pour un compte jeune, le palier du passe dit « 1 h de production maintenant, 1 h en réserve du
+  départ » (`describePassRewardFor`), et la ligne « Réserve du départ » des Ordres du jour donne le délai à la minute (« Versée dans
+  23 h 29 min »).
+- Prise en main (6.14.166, NJ-31, NJ-34) : l'histoire du chapitre 3 attend la fin du raid d'initiation (`tutorialRaidPending`) ;
+  l'objectif 8 devient « Espionner un joueur ou un Seigneur » (toute sonde lancée compte déjà, un Seigneur de guerre aussi ; espionner
+  ne lève pas la protection).
