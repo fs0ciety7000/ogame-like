@@ -1,5 +1,6 @@
 ---
 version: 6.14.157
+audience: equipe
 iteration: 216
 date: 2026-10-08
 title: Démarrage un peu plus léger

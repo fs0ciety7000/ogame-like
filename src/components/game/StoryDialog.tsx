@@ -13,6 +13,7 @@ import { coalitionPhase, coalitionScene, type Coalition } from "@/game/coalition
 import { findWarlord } from "@/game/warlords";
 import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
 import { markAnnouncementsSeen } from "@/services/playerService";
+import { useExclusiveModal } from "@/store/modalSlotStore";
 
 /* v4.1 : dialogues du tutoriel scénarisé (Vashka, Varan), une fois chacun. */
 
@@ -93,7 +94,9 @@ export function StoryDialog({ player }: { player: PlayerState }) {
     () => (state.off ? null : pendingScene(player, state.seen)) ?? chronicleScene(player, state.seen) ?? coalitionArcScene(player, coalition, state.seen),
     [player, state, coalition],
   );
-  if (!scene || !ready || announcing) return null;
+  // 6.14.161 (NJ-2) : l'histoire et l'alerte de raid ne s'ouvrent jamais ensemble (la première arrivée passe d'abord).
+  const visible = useExclusiveModal("story", !!scene && ready && !announcing);
+  if (!scene || !visible) return null;
   const close = () => {
     const next = { ...local, seen: [...local.seen, scene.id] };
     writeSeen(player.uid, next);

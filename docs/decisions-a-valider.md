@@ -38,3 +38,5 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q399 | Règle proposée pour CLAUDE.md : « un export de `hooksEntry.ts` est appelé par un hook écrit à la main ; `dead-exports.mjs --hooks` les liste, `deadExports.test.ts` échoue sinon » (`docs/changes/6.14.158-hooks-allege.md`) | valider |
 | Q402 | Coûts des niveaux 5 à 8 non touchés (au-delà du niveau 4 ou 5, le coût freine) : mesure d'abord, lot RD-2 avec R10 après le 1er novembre (`docs/proposals/rythme-du-depart.md`) | valider |
 | Q403 | Courbe du départ appliquée à tout contenu (règle globale), sans migration ; retour à l'ancienne formule par la case « Courbe du départ activée » (`docs/proposals/rythme-du-depart.md`) | valider |
+| Q404 | Calme du nouveau compte : pas d'annonce ni de pastille Nouveautés pendant 24 h (`newcomerNews.quietHours`) (`docs/changes/6.14.161-parcours-debutant.md`) | valider |
+| Q405 | Notes du changelog cachées aux joueurs (`audience: equipe`) : seule la 6.14.157 est marquée (`docs/changes/6.14.161-parcours-debutant.md`) | valider |

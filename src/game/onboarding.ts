@@ -46,13 +46,45 @@ export function onboardingRankXp(): number {
   return RANKS.find((r) => r.id === ONBOARDING_RANK)?.xp ?? 250;
 }
 
+/** 6.14.161 (S1, NJ-1) : récompenses des objectifs, réglables dans l'admin (Tous les réglages, « Prise en main : récompenses »).
+ *  La première recherche verse 20 Acier renforcé : juste ce que demande la recherche du Drone récupérateur au niveau 1
+ *  (objectif suivant, « Posséder 5 drones »). Avant, un compte neuf n'en avait pas et restait bloqué. */
+export const ONBOARDING_REWARDS: Record<string, Partial<Record<ResourceId, number>>> = {
+  scrap3: { scrap: 1_000, energy: 500 },
+  reactor3: { scrap: 1_500, energy: 1_000 },
+  research: { nano: 2_000, data: 2_000, reinforcedSteel: 20 },
+  drones5: { scrap: 3_000 },
+  mission: { scrap: 5_000, energy: 2_000 },
+  storage2: { scrap: 5_000, energy: 5_000 },
+  rockets10: { reinforcedSteel: 20 },
+  spy: { cyberModule: 30 },
+  alliance: { scrap: 10_000, energy: 10_000 },
+  rank: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
+};
+
+const REWARD_HINT = "Ressources versées à la réclamation (scrap, energy, nano, data, reinforcedSteel, cyberModule, syntheticNanites, aiFragment).";
+export const ONBOARDING_REWARDS_META = {
+  scrap3: { label: "Objectif 1 : extracteur de ferraille niveau 3", hint: REWARD_HINT },
+  reactor3: { label: "Objectif 2 : réacteur niveau 3", hint: REWARD_HINT },
+  research: { label: "Objectif 3 : première recherche", hint: `${REWARD_HINT} L'Acier renforcé paie la recherche du Drone (objectif 4).` },
+  drones5: { label: "Objectif 4 : 5 drones récupérateurs", hint: REWARD_HINT },
+  mission: { label: "Objectif 5 : première mission", hint: REWARD_HINT },
+  storage2: { label: "Objectif 6 : entrepôt niveau 2", hint: REWARD_HINT },
+  rockets10: { label: "Objectif 7 : 10 roquettes", hint: REWARD_HINT },
+  spy: { label: "Objectif 8 : espionner un joueur", hint: REWARD_HINT },
+  alliance: { label: "Objectif 9 : alliance", hint: REWARD_HINT },
+  rank: { label: "Objectif 10 : rang Fer II", hint: REWARD_HINT },
+};
+
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "scrap3",
     label: "Extracteur de ferraille au niveau 3",
     hint: "La ferraille paie presque tout : améliore son extracteur en premier.",
     to: "/game/batiments",
-    reward: { scrap: 1_000, energy: 500 },
+    get reward() {
+      return ONBOARDING_REWARDS.scrap3;
+    },
     done: (p) => level(p, "extracteur_ferraille") >= 3,
   },
   {
@@ -60,7 +92,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Réacteur au niveau 3",
     hint: "L'énergie instable accompagne la ferraille dans la plupart des coûts.",
     to: "/game/batiments",
-    reward: { scrap: 1_500, energy: 1_000 },
+    get reward() {
+      return ONBOARDING_REWARDS.reactor3;
+    },
     done: (p) => level(p, "reacteur_instable") >= 3,
   },
   {
@@ -68,15 +102,19 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Lancer une première recherche",
     hint: "Le Labo débloque les unités et renforce toute ton économie.",
     to: "/game/labo",
-    reward: { nano: 2_000, data: 2_000 },
+    get reward() {
+      return ONBOARDING_REWARDS.research;
+    },
     done: (p) => Object.values(p.techLevels ?? {}).some((l) => l > 0),
   },
   {
     id: "drones5",
     label: "Posséder 5 drones récupérateurs",
-    hint: "Les drones ouvrent les premières missions.",
+    hint: "Les drones ouvrent les premières missions. Leur recherche au Labo demande de l'Acier renforcé : l'objectif 3 t'en donne, sinon passe par le comptoir (page Ressources).",
     to: "/game/unites",
-    reward: { scrap: 3_000 },
+    get reward() {
+      return ONBOARDING_REWARDS.drones5;
+    },
     done: (p) => count(p, "drone_recuperateur") >= 5,
   },
   {
@@ -84,7 +122,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Terminer une mission",
     hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
     to: "/game/missions",
-    reward: { scrap: 5_000, energy: 2_000 },
+    get reward() {
+      return ONBOARDING_REWARDS.mission;
+    },
     done: (p) => (p.stats?.missions ?? 0) >= 1,
   },
   {
@@ -92,7 +132,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Entrepôt au niveau 2",
     hint: "L'entrepôt augmente ta capacité et met une partie du stock à l'abri des pillards.",
     to: "/game/batiments",
-    reward: { scrap: 5_000, energy: 5_000 },
+    get reward() {
+      return ONBOARDING_REWARDS.storage2;
+    },
     done: (p) => level(p, "entrepot") >= 2,
   },
   {
@@ -100,7 +142,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Installer 10 roquettes",
     hint: "Une première défense décourage les attaques opportunistes.",
     to: "/game/unites",
-    reward: { reinforcedSteel: 20 },
+    get reward() {
+      return ONBOARDING_REWARDS.rockets10;
+    },
     done: (p) => count(p, "roquette") >= 10,
   },
   {
@@ -108,7 +152,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Espionner un joueur",
     hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
     to: "/game/galaxie",
-    reward: { cyberModule: 30 },
+    get reward() {
+      return ONBOARDING_REWARDS.spy;
+    },
     done: (p) => (p.stats?.spies ?? 0) >= 1,
   },
   {
@@ -116,15 +162,20 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     label: "Rejoindre ou créer une alliance",
     hint: "Trésor commun, recherches partagées et garnisons : on est plus forts à plusieurs.",
     to: "/game/alliance",
-    reward: { scrap: 10_000, energy: 10_000 },
+    get reward() {
+      return ONBOARDING_REWARDS.alliance;
+    },
     done: (p) => !!p.allianceId,
   },
   {
     id: "rank",
     label: "Atteindre le rang Fer II",
-    hint: "L'XP vient des combats, des bâtiments, des recherches et des missions.",
-    to: "/game/profil",
-    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
+    // 6.14.161 (NJ-6) : bâtiments et recherches ne donnent pas d'XP (sources : `XpSource`, xpAudit.ts) ; le lien mène aux missions.
+    hint: "L'XP vient des missions, des combats, des primes, des objectifs du jour et des succès. Bâtiments et recherches n'en donnent pas.",
+    to: "/game/missions",
+    get reward() {
+      return ONBOARDING_REWARDS.rank;
+    },
     title: ONBOARDING_TITLE,
     done: (p) => (p.xp ?? 0) >= onboardingRankXp(),
   },

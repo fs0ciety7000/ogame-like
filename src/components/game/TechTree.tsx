@@ -189,6 +189,7 @@ export function TechTree({
   onSelect,
   fullscreen = false,
   onToggleFullscreen,
+  initialFocus = null,
 }: {
   levels: Record<string, number>;
   /** v5.9 : unités dont le joueur possède le plan (prérequis de certaines technos). */
@@ -198,8 +199,11 @@ export function TechTree({
   onSelect: (id: string) => void;
   fullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  /** 6.14.161 (NJ-8) : techno à cadrer à l'ouverture (avec ses prérequis), au lieu de l'arbre entier. */
+  initialFocus?: string | null;
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [fitNodes] = useState(() => (initialFocus ? [initialFocus, ...techAncestors(initialFocus)].map((id) => ({ id })) : undefined));
   const focusId = hoveredId ?? selectedId;
   const activeKey = [...activeIds].sort().join(",");
   const plansKey = [...ownedPlans].sort().join(",");
@@ -299,7 +303,7 @@ export function TechTree({
           nodeTypes={NODE_TYPES}
           colorMode="dark"
           fitView
-          fitViewOptions={{ padding: 0.06 }}
+          fitViewOptions={fitNodes ? { padding: 0.2, nodes: fitNodes, maxZoom: 1 } : { padding: 0.06 }}
           minZoom={0.3}
           maxZoom={1.6}
           nodesDraggable={false}

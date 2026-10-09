@@ -15,6 +15,8 @@ import { usePlayerStore } from "@/store/playerStore";
 import { usePhalanxSync } from "@/store/phalanxStore";
 import { phalanxLevel } from "@/game/phalanx";
 import { formatClock } from "@/lib/utils";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { useExclusiveModal } from "@/store/modalSlotStore";
 
 /* v4.9.3 : alerte plein écran à 5 minutes de l'impact d'une flotte hostile.
    Une seule fois par flotte (l'alerte fermée ne revient pas), avec la fuite à portée de main. */
@@ -67,7 +69,9 @@ export function RaidAlert() {
   const imminent = fleets
     .filter((f) => isHostile(f, uid) && f.arriveAtMs > now && f.arriveAtMs - now <= RAID_ALERT_MS && !dismissed.has(f.id))
     .sort((a, b) => a.arriveAtMs - b.arriveAtMs);
-  const next = imminent[0];
+  // 6.14.161 (NJ-2) : l'alerte attend la fin d'une histoire ouverte (une seule grande fenêtre à la fois).
+  const shown = useExclusiveModal("raid-alert", imminent.length > 0);
+  const next = shown ? imminent[0] : undefined;
   const close = () => {
     for (const f of imminent) dismissed.add(f.id);
     try {
@@ -88,16 +92,25 @@ export function RaidAlert() {
 
   return (
     <>
+      {/* 6.14.161 (NJ-2) : fenêtre modale Radix. Ouverte par-dessus une autre fenêtre, elle passe au premier plan des
+          touchers (avant, la fenêtre du dessous bloquait ses boutons et le premier toucher la fermait). */}
+      <DialogPrimitive.Root open={!!next} onOpenChange={(o) => !o && close()}>
       <AnimatePresence>
         {next && (
+          <DialogPrimitive.Portal forceMount>
+          <DialogPrimitive.Content
+            asChild
+            forceMount
+            role="alertdialog"
+            aria-describedby={undefined}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
           <motion.div
             key="raid-alert"
-            role="alertdialog"
-            aria-label="Attaque imminente"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] grid place-items-center bg-space-950/80 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[70] grid place-items-center bg-space-950/80 p-4 backdrop-blur-sm focus:outline-none"
           >
             <span aria-hidden className="pointer-events-none absolute inset-0 animate-pulse bg-[radial-gradient(ellipse_at_center,transparent_40%,color-mix(in_srgb,var(--color-danger-glow)_28%,transparent)_100%)]" />
             <motion.div
@@ -110,7 +123,9 @@ export function RaidAlert() {
               </button>
               <AlertTriangle className="mx-auto h-10 w-10 animate-pulse text-danger-glow" />
               <div ref={glitchRef}>
-                <p className="hud-eyebrow mt-3 text-[11px] text-danger-glow">Attaque imminente</p>
+                <DialogPrimitive.Title asChild>
+                  <p className="hud-eyebrow mt-3 text-[11px] text-danger-glow">Attaque imminente</p>
+                </DialogPrimitive.Title>
               <p className="mt-1 font-display text-lg text-slate-100">
                 {next.mission === "pirate" ? `Raid : ${next.ownerPseudo}` : `${next.ownerPseudo} attaque`}
                 {next.targetOwnerUid ? ` ta colonie ${next.targetPseudo}` : ""}
@@ -141,8 +156,11 @@ export function RaidAlert() {
               </div>
             </motion.div>
           </motion.div>
+          </DialogPrimitive.Content>
+          </DialogPrimitive.Portal>
         )}
       </AnimatePresence>
+      </DialogPrimitive.Root>
       <PatrolDialog
         open={patrol}
         onClose={() => {

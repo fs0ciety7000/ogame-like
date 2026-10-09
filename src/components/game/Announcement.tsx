@@ -10,7 +10,8 @@ import { accent } from "@/components/game/PirateUltimatum";
 import { activeUltimatum, FACTIONS } from "@/game/pirates";
 import { usePlayerStore } from "@/store/playerStore";
 import { assetUrl } from "@/lib/assets";
-import { nextAnnouncement, scheduledAnnouncements, type AnnouncementSettings, type CustomAnnouncement } from "@/game/announcements";
+import { useExclusiveModal } from "@/store/modalSlotStore";
+import { isNewcomer, nextAnnouncement, scheduledAnnouncements, type AnnouncementSettings, type CustomAnnouncement } from "@/game/announcements";
 import { markAnnouncementsSeen } from "@/services/playerService";
 import { previewAnnouncement, useAnnouncementPreview, useAnnouncementSettings } from "@/services/announcementService";
 import { useContentStore } from "@/services/contentService";
@@ -517,13 +518,22 @@ export function AnnouncementDialog() {
     );
     const next = nextAnnouncement(list, seenIds(uid, usePlayerStore.getState().player?.announcementsSeen));
     if (!next) return;
+    // 6.14.161 (NJ-10) : un compte neuf n'ouvre pas l'annonce d'une mise à jour d'avant son arrivée ; elle est marquée vue.
+    if (isNewcomer(usePlayerStore.getState().player?.createdAtMs, now)) {
+      markSeen(next.markIds.map((id) => `${uid}:${id}`));
+      void markAnnouncementsSeen(next.markIds).catch(() => undefined);
+      return;
+    }
     useAnnouncementPending.setState({ pending: true });
     const timer = setTimeout(() => setCurrent(next), 1200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- une annonce par chargement : `current` ne relance pas le choix
   }, [uid, threatened, contentLoaded, settings]);
 
-  const shown = preview ?? current?.show ?? null;
+  const wanted = preview ?? current?.show ?? null;
+  // 6.14.161 (NJ-2) : pas par-dessus l'alerte de raid (ni l'inverse) : une seule grande fenêtre à la fois.
+  const visible = useExclusiveModal("announcement", !!wanted && !!uid);
+  const shown = visible ? wanted : null;
   if (!shown || !uid) return null;
   const gold = shown.tone === "gold";
   const factions = shown.factions.map((id) => FACTIONS.find((f) => f.id === id && f.enabled)).filter((f) => !!f);
@@ -545,7 +555,7 @@ export function AnnouncementDialog() {
       <DialogContent className="max-h-[94vh] max-w-5xl overflow-hidden overflow-y-auto border-0 p-0 sm:w-[94vw]">
         <div className="relative flex min-h-[78vh] flex-col justify-end overflow-hidden bg-space-950">
           {shown.art && (
-            <motion.picture className="absolute inset-x-0 top-0 h-[70%] sm:h-[62%]" initial={{ opacity: 0, scale: 1.08 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}>
+            <motion.picture className="absolute inset-x-0 top-0 h-[40vh] md:h-[62%]" initial={{ opacity: 0, scale: 1.08 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}>
               {shown.artMobile && <source media="(max-width: 640px)" srcSet={assetUrl(shown.artMobile)} />}
               <img src={assetUrl(shown.art)} alt="" className="h-full w-full object-cover object-[center_75%]" />
             </motion.picture>
@@ -585,7 +595,7 @@ export function AnnouncementDialog() {
 
           {/* Texte */}
           <motion.div
-            className="relative z-10 flex flex-col gap-4 p-6 pt-[42vh] md:p-10 md:pt-64"
+            className="relative z-10 flex flex-col gap-4 p-6 pt-[30vh] md:p-10 md:pt-64"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.75 }}

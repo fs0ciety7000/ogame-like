@@ -456,6 +456,12 @@ export const UNITS: UnitDef[] = [];
 export const UNIT_BASE_STATS: Record<string, { attack: number; defense: number; perLevel: number }> = {};
 /** Technologie qui débloque/améliore chaque unité. */
 export const UNIT_TO_TECH: Record<string, string> = {};
+
+/** 6.14.161 (NJ-8) : lien vers le Labo, techno de l'unité sélectionnée (avant : le Labo s'ouvrait sur la première techno). */
+export function unitResearchPath(unitId: string): string {
+  const tech = UNIT_TO_TECH[unitId];
+  return tech ? `/game/labo?tech=${encodeURIComponent(tech)}` : "/game/labo";
+}
 export const OFFENSIVE_UNITS: string[] = [];
 export const DEFENSIVE_UNITS: string[] = [];
 

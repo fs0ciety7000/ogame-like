@@ -52,6 +52,8 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 
 **NJ-1. Le premier objectif d'unités est bloqué par une ressource que le joueur n'a pas.**
 
+> **Corrigé en 6.14.161** (S1) : 20 Acier renforcé versés par l'objectif 3 (réglable), conseil et lien vers le comptoir. Fiche : `docs/changes/6.14.161-parcours-debutant.md`.
+
 - **Ce que voit le joueur** : « Posséder 5 drones récupérateurs » (prise en main, chapitre 1). La recherche Drone coûte 20 Acier renforcé
   (« manque 20 ») et un compte neuf en a 0. Le seul indice est « Ta production n'y suffira pas : passe par le marché », mais le marché
   n'est pas dans la navigation. Le comptoir est en bas de la page Ressources.
@@ -62,6 +64,8 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
   « passe par le marché » doit mener au comptoir.
 
 **NJ-2. Raid scripté : deux fenêtres superposées, et l'alerte ne répond plus.**
+
+> **Corrigé en 6.14.161** (S1) : une seule fenêtre à la fois (histoire puis alerte), alerte en fenêtre Radix. Fiche : `docs/changes/6.14.161-parcours-debutant.md`.
 
 - **Ce que voit le joueur** : à la minute 16, l'alerte « Attaque imminente » s'affiche par-dessus la bulle d'histoire « La Confrérie attaque »,
   qui reste cachée dessous.
@@ -110,6 +114,8 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 
 **NJ-6. Le conseil sur l'XP est faux.**
 
+> **Corrigé en 6.14.161** (S1) : texte corrigé, lien vers les Missions. Fiche : `docs/changes/6.14.161-parcours-debutant.md`.
+
 - **Ce que voit le joueur** : l'objectif « Atteindre le rang Fer II » dit « L'XP vient des combats, des bâtiments, des recherches et des
   missions ». Pourtant, des dizaines de niveaux de bâtiments et de recherches ne lui ont rapporté aucune XP : il est resté à 213 XP de la
   minute 20 à la minute 42.
@@ -129,6 +135,8 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 
 **NJ-8. Le lien « Lancer la recherche → » d'une unité verrouillée mène à la mauvaise techno.**
 
+> **Corrigé en 6.14.161** (S1) : `?tech=<id>`, techno sélectionnée et cadrée. Fiche : `docs/changes/6.14.161-parcours-debutant.md`.
+
 - **Ce que voit le joueur** : sur la carte Drone récupérateur, le lien ouvre le Labo avec « Analyse de matériaux » sélectionnée, pas « Drone
   récupérateur ».
 - **Où** : Unités vers Labo.
@@ -147,6 +155,8 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
   « Espionner d'abord » dans le formulaire d'attaque. Masquer les vaisseaux non possédés.
 
 **NJ-10. Le premier écran est une annonce hors sujet, et trop de fenêtres s'enchaînent.**
+
+> **Corrigé en 6.14.161** (S1) : annonce marquée vue pour un compte de moins de 24 h, image bornée sur mobile ; reste : fenêtres d'histoire en fin de prise en main (S4). Fiche : `docs/changes/6.14.161-parcours-debutant.md`.
 
 - **Ce que voit le joueur** :
   - Le premier écran après l'inscription est l'annonce de la 6.14 (lune, phalange, porte de saut, garnisons d'alliance) : du jargon de
@@ -196,7 +206,7 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 - **NJ-17. Le Labo disparaît de la barre du bas quand la Galaxie s'ouvre.**
   - **Ce que voit le joueur** : le Labo, utilisé toutes les 2 minutes, passe dans « Plus ».
   - **Piste** : garder le Labo et mettre la Galaxie dans « Plus », ou laisser le joueur épingler ses onglets.
-- **NJ-18. Les Nouveautés sont des notes de développeur.**
+- **NJ-18. Les Nouveautés sont des notes de développeur.** **Corrigé en 6.14.161** (S1) : pas de pastille le premier jour, notes d'avant l'inscription jamais « nouvelles », notes `audience: equipe` cachées, lignes coupées réparées.
   - **Ce que voit le joueur** : la pastille affiche « 9+ » dès la première minute. Les notes sont techniques (« 10 Ko de moins au
     démarrage »).
   - Les paragraphes sont cassés par les retours à la ligne du Markdown (« une mission se / termine »).

@@ -8,6 +8,29 @@ import { normalizePoll, type Poll } from "@/game/polls";
 
 export const ANNOUNCEMENTS_KEY = "announcements";
 
+/* 6.14.161 (S1, NJ-10 et NJ-18) : un compte qui vient d'être créé ne voit ni l'annonce d'une mise à jour (6.14 : lune,
+   phalange…) ni la pastille des Nouveautés : rien de ce qui précède son arrivée n'est « nouveau » pour lui. Les annonces
+   en ligne pendant ses premières heures sont marquées vues sans s'ouvrir ; les Nouveautés ne comptent que les notes
+   publiées après le jour de l'inscription. */
+export const NEWCOMER_NEWS_RULES = { quietHours: 24 };
+
+export const NEWCOMER_NEWS_RULES_META = {
+  quietHours: {
+    label: "Nouveau compte : durée sans annonce ni pastille des Nouveautés",
+    unit: "h",
+    min: 0,
+    max: 720,
+    hint: "Pendant ces heures après l'inscription, les annonces en ligne sont marquées vues sans s'ouvrir. 0 : un compte neuf voit l'annonce en cours.",
+  },
+};
+
+/** Le compte a moins de `quietHours` heures (faux sans date de création : ancien compte). */
+export function isNewcomer(createdAtMs: number | undefined, now: number): boolean {
+  const hours = NEWCOMER_NEWS_RULES.quietHours;
+  if (!createdAtMs || !(hours > 0)) return false;
+  return now - createdAtMs < hours * 3600_000;
+}
+
 /** 5.26 : sondage d'une annonce de l'administration (null si absent). */
 export function findPoll(settings: AnnouncementSettings, id: string): Poll | null {
   return settings.custom.find((a) => a.id === id)?.poll ?? null;

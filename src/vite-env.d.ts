@@ -2,7 +2,7 @@
 
 declare module "virtual:changelog-index" {
   /** Métadonnées du journal, plus récente d'abord (voir changelog-index-plugin.ts). */
-  export const CHANGELOG_INDEX: { id: string; version: string | null; iteration: number | null }[];
+  export const CHANGELOG_INDEX: { id: string; version: string | null; iteration: number | null; date: string; team: boolean }[];
 }
 
 interface ImportMetaEnv {

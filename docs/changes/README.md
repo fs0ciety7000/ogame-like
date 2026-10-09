@@ -259,6 +259,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.158 | [Bundle des hooks allégé : exports de `hooksEntry.ts` jamais appelés (R15, AJ27-11b)](6.14.158-hooks-allege.md) | refactoring (serveur) + outillage (`dead-exports.mjs --hooks`) + tests | lot R15 de la [feuille d'hiver 2031](../proposals/feuille-de-route-2031-hiver.md) ; suite de [6.14.153](6.14.153-menage-exports.md) (Q381) |
 | 6.14.159 | [Rythme du départ : premiers niveaux des bâtiments en secondes (R16, RD-1)](6.14.159-rythme-du-depart.md) | ajustement (équilibre) + fonctionnalité (admin, simulateur) + tests | lot R16 de la [feuille d'hiver 2031](../proposals/feuille-de-route-2031-hiver.md) ; [proposition](../proposals/rythme-du-depart.md) (Q400 à Q403) ; demande de l'utilisateur du 2026-10-08 |
 | 6.14.160 | [Plan unique et étape de stabilisation](6.14.160-plan-stabilisation.md) | docs (méthode) | [plan](../plan.md) ; décision de l'utilisateur du 2026-10-09 |
+| 6.14.161 | [Parcours d'un débutant sans blocage (S1)](6.14.161-parcours-debutant.md) | correctif + ajustement (prise en main) + réglages admin | lot S1 du [plan](../plan.md) ; [audit du parcours](../audit/2026-10-09-parcours-nouveau-joueur.md) (NJ-1, NJ-2, NJ-6, NJ-8, NJ-10, NJ-18) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

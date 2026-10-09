@@ -27,6 +27,8 @@ import { EXCHANGE_RULES, EXCHANGE_RULES_META } from "@/game/resources";
 import { COLONY_BASE_RULES, COLONY_BASE_RULES_META } from "@/game/fleets";
 import { MOON_RULES, MOON_RULES_META } from "@/game/moon";
 import { NAV_UNLOCK_RULES, NAV_UNLOCK_RULES_META } from "@/game/navUnlock";
+import { NEWCOMER_NEWS_RULES, NEWCOMER_NEWS_RULES_META } from "@/game/announcements";
+import { ONBOARDING_REWARDS, ONBOARDING_REWARDS_META } from "@/game/onboarding";
 import { PHALANX_RULES, PHALANX_RULES_META } from "@/game/phalanx";
 import { PRESTIGE_RULES, PRESTIGE_RULES_META } from "@/game/prestige";
 import { JUMP_GATE_RULES, JUMP_GATE_RULES_META } from "@/game/jumpGate";
@@ -190,6 +192,10 @@ export const REGISTERED_RULES = {
   trackedActions: { label: "Objectifs générés : actions suivies (registre)", target: () => TRACKED_ACTION_RULES, meta: () => TRACKED_ACTION_RULES_META },
   territories: { label: "Territoires d'alliance", target: () => TERRITORY_RULES, meta: () => TERRITORY_RULES_META },
   treaties: { label: "Traités avec les factions", target: () => TREATY_RULES, meta: () => TREATY_RULES_META },
+  // 6.14.161 (S1, NJ-10 et NJ-18) : un compte neuf ne voit ni annonce de mise à jour ni pastille des Nouveautés.
+  newcomerNews: { label: "Nouveau compte : annonces et Nouveautés", target: () => NEWCOMER_NEWS_RULES, meta: () => NEWCOMER_NEWS_RULES_META },
+  // 6.14.161 (S1, NJ-1) : récompenses des 10 objectifs de la prise en main (Acier renforcé de la recherche du Drone).
+  onboardingRewards: { label: "Prise en main : récompenses des objectifs", target: () => ONBOARDING_REWARDS, meta: () => ONBOARDING_REWARDS_META },
   tutorialRaid: { label: "Tutoriel : raid de Varan", target: () => TUTORIAL_RAID, meta: () => TUTORIAL_RAID_META },
   unitAudit: { label: "Équilibrage : seuils de l'audit des unités", target: () => UNIT_AUDIT_RULES, meta: () => UNIT_AUDIT_RULES_META },
   vacation: { label: "Mode vacances", target: () => VACATION_RULES, meta: () => VACATION_RULES_META },

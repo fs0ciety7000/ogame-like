@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { CHANGELOG_INDEX } from "virtual:changelog-index";
+import { isNewcomer } from "@/game/announcements";
+import { parisDay } from "@/game/retention";
 
 /* =====================================================
    Journal des mises à jour : un fichier Markdown par version dans
@@ -22,6 +24,10 @@ import { CHANGELOG_INDEX } from "virtual:changelog-index";
      avec des nouveautés, correctif pour une livraison de corrections
      seules, majeure pour une refonte (nouvelle saison, remise à zéro…).
 
+   - audience: equipe (facultatif, 6.14.161) : note technique (découpage du
+     code, tailles de texte…) gardée dans le dépôt mais absente de la page
+     Nouveautés des joueurs et de sa pastille.
+
    Les fichiers sont intégrés au build : ajouter un fichier suffit.
 ===================================================== */
 
@@ -33,6 +39,8 @@ export interface ChangelogEntry {
   title: string;
   /** Illustration facultative (chemin public, ex. /assets/story/varan.webp). */
   image: string | null;
+  /** 6.14.161 (NJ-18) : note technique (`audience: equipe`), cachée aux joueurs. */
+  team: boolean;
   body: string;
 }
 
@@ -53,6 +61,7 @@ export function parseChangelogFile(id: string, raw: string): ChangelogEntry {
     date: meta.date ?? id.slice(0, 10),
     title: meta.title ?? id,
     image: meta.image || null,
+    team: meta.audience === "equipe",
     body: (match ? match[2] : raw).trim(),
   };
 }
@@ -75,14 +84,24 @@ function readSeen(): string {
 
 export const useChangelogStore = create<{ seen: string }>(() => ({ seen: readSeen() }));
 
-/** Nombre d'entrées publiées depuis la dernière visite de la page Nouveautés. */
-export function useUnreadChangelogCount(): number {
-  const seen = useChangelogStore((s) => s.seen);
-  return countUnread(seen);
+/** 6.14.161 (NJ-18) : jour d'inscription (Paris) ; les notes de ce jour et d'avant ne sont pas « nouvelles » pour le compte. */
+export function changelogSince(createdAtMs: number | undefined): string {
+  return createdAtMs ? parisDay(createdAtMs) : "";
 }
 
-/** Entrées publiées après `seen` (id de la dernière entrée vue). */
-export function isUnread(entryId: string, seen: string): boolean {
+/** Nombre d'entrées publiées depuis la dernière visite de la page Nouveautés. 6.14.161 (NJ-18) : aucune pour un compte
+ *  neuf (`newcomerNews.quietHours`), ni pour les notes techniques ou antérieures à l'inscription. */
+export function useUnreadChangelogCount(createdAtMs: number | undefined): number {
+  const seen = useChangelogStore((s) => s.seen);
+  if (isNewcomer(createdAtMs, Date.now())) return 0;
+  return countUnread(seen, changelogSince(createdAtMs));
+}
+
+/** Entrées publiées après `seen` (id de la dernière entrée vue) et après le jour `since` (inscription, « » : sans limite).
+ *  Une note technique n'est jamais « non lue ». */
+export function isUnread(entryId: string, seen: string, since = ""): boolean {
+  const entry = CHANGELOG_INDEX.find((e) => e.id === entryId);
+  if (entry && (entry.team || (since && entry.date <= since))) return false;
   if (!seen) return true;
   const seenIndex = CHANGELOG_INDEX.findIndex((e) => e.id === seen);
   // Entrée vue inconnue (fichier renommé) : on retombe sur l'ordre des noms.
@@ -90,8 +109,8 @@ export function isUnread(entryId: string, seen: string): boolean {
   return CHANGELOG_INDEX.findIndex((e) => e.id === entryId) < seenIndex;
 }
 
-function countUnread(seen: string): number {
-  return CHANGELOG_INDEX.filter((e) => isUnread(e.id, seen)).length;
+function countUnread(seen: string, since: string): number {
+  return CHANGELOG_INDEX.filter((e) => isUnread(e.id, seen, since)).length;
 }
 
 export function markChangelogSeen() {

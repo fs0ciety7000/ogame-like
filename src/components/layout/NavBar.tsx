@@ -356,7 +356,7 @@ const ALL_ITEMS = ALL_NAV_ITEMS;
 /** Pastilles de navigation : renvoie le compteur d'une page. */
 function useBadges(): (to: string) => number {
   const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
-  const changelogUnread = useUnreadChangelogCount();
+  const changelogUnread = useUnreadChangelogCount(usePlayerStore((s) => s.player?.createdAtMs));
   const reportsUnread = useReportBadges((s) => s.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid)) + useGlobalUnreadCount(useAuthStore((s) => s.user?.uid));
   const leviathan = useLeviathan();

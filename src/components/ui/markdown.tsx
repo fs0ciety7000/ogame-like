@@ -1,6 +1,7 @@
 import { alpha } from "@/lib/utils";
 import type { ReactNode } from "react";
 import { splitBadge, type ChangelogBadge } from "@/lib/changelogBadges";
+import { markdownBlocks } from "@/lib/markdownBlocks";
 
 /* Rendu Markdown minimal et sûr (aucun HTML injecté) pour le changelog :
  * titres ## / ###, listes « - », paragraphes, **gras**, `code`, [lien](url),
@@ -51,47 +52,29 @@ function listItem(text: string, key: string): ReactNode[] {
 }
 
 export function Markdown({ source }: { source: string }) {
-  const blocks: ReactNode[] = [];
-  let list: string[] = [];
-  let paragraph: string[] = [];
-
-  const flush = () => {
-    if (list.length) {
-      const items = list;
-      blocks.push(
-        <ul key={`ul-${blocks.length}`} className="ml-4 list-disc space-y-1 marker:text-cyan-glow/60">
-          {items.map((it, i) => (
-            <li key={i}>{listItem(it, `li-${blocks.length}-${i}`)}</li>
+  const blocks: ReactNode[] = markdownBlocks(source).map((b, n) => {
+    if (b.kind === "ul")
+      return (
+        <ul key={`ul-${n}`} className="ml-4 list-disc space-y-1 marker:text-cyan-glow/60">
+          {b.items.map((it, i) => (
+            <li key={i}>{listItem(it, `li-${n}-${i}`)}</li>
           ))}
-        </ul>,
+        </ul>
       );
-      list = [];
-    }
-    if (paragraph.length) {
-      blocks.push(<p key={`p-${blocks.length}`}>{inline(paragraph.join(" "), `p-${blocks.length}`)}</p>);
-      paragraph = [];
-    }
-  };
-
-  for (const rawLine of source.split("\n")) {
-    const line = rawLine.trimEnd();
-    if (!line.trim()) {
-      flush();
-    } else if (line.startsWith("### ")) {
-      flush();
-      blocks.push(<h4 key={`h4-${blocks.length}`} className="mt-2 text-sm font-semibold text-slate-100">{inline(line.slice(4), `h4-${blocks.length}`)}</h4>);
-    } else if (line.startsWith("## ")) {
-      flush();
-      blocks.push(<h3 key={`h3-${blocks.length}`} className="mt-3 font-display text-sm text-cyan-glow">{inline(line.slice(3), `h3-${blocks.length}`)}</h3>);
-    } else if (/^\s*[-*] /.test(line)) {
-      if (paragraph.length) flush();
-      list.push(line.replace(/^\s*[-*] /, ""));
-    } else {
-      if (list.length) flush();
-      paragraph.push(line.trim());
-    }
-  }
-  flush();
+    if (b.kind === "h3")
+      return (
+        <h3 key={`h3-${n}`} className="mt-3 font-display text-sm text-cyan-glow">
+          {inline(b.text, `h3-${n}`)}
+        </h3>
+      );
+    if (b.kind === "h4")
+      return (
+        <h4 key={`h4-${n}`} className="mt-2 text-sm font-semibold text-slate-100">
+          {inline(b.text, `h4-${n}`)}
+        </h4>
+      );
+    return <p key={`p-${n}`}>{inline(b.text, `p-${n}`)}</p>;
+  });
 
   return <div className="flex flex-col gap-2 text-sm leading-relaxed text-slate-300">{blocks}</div>;
 }

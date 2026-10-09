@@ -7,7 +7,7 @@ import { parisDay } from "@/game/retention";
 describe("changelog", () => {
   it("parses the front matter and body", () => {
     const e = parseChangelogFile("2026-01-02-test", "---\nversion: 2.1.0\niteration: 7\ndate: 2026-01-02\ntitle: Titre\n---\n## Section\n- point");
-    expect(e).toEqual({ id: "2026-01-02-test", version: "2.1.0", iteration: 7, date: "2026-01-02", title: "Titre", image: null, body: "## Section\n- point" });
+    expect(e).toEqual({ id: "2026-01-02-test", version: "2.1.0", iteration: 7, date: "2026-01-02", title: "Titre", image: null, team: false, body: "## Section\n- point" });
     expect(parseChangelogFile("x", "---\ntitle: T\n---\n")).toMatchObject({ version: null, iteration: null });
   });
 

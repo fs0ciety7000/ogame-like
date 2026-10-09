@@ -10,10 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ChangelogBadgePill, Markdown } from "@/components/ui/markdown";
 import { countBadges } from "@/lib/changelogBadges";
-import { CURRENT_VERSION, isUnread, markChangelogSeen, useChangelogStore } from "@/lib/changelog";
+import { changelogSince, CURRENT_VERSION, isUnread, markChangelogSeen, useChangelogStore } from "@/lib/changelog";
+import { usePlayerStore } from "@/store/playerStore";
 import { CHANGELOG } from "@/lib/changelogEntries";
 
 const STEP = 10;
+/** 6.14.161 (NJ-18) : notes des joueurs, sans les notes techniques (`audience: equipe`). */
+const PLAYER_CHANGELOG = CHANGELOG.filter((e) => !e.team);
 
 function formatDate(iso: string) {
   const d = new Date(`${iso}T12:00:00`);
@@ -24,6 +27,7 @@ export function ChangelogPage() {
   // Photo de l'état « lu » à l'ouverture : les entrées nouvelles gardent leur
   // badge pendant la visite, puis tout est marqué comme lu.
   const seenAtOpen = useChangelogStore.getState().seen;
+  const since = changelogSince(usePlayerStore((s) => s.player?.createdAtMs));
   // AU13 : la page affichait toutes les notes d'un bloc (180 000 px à 375 px) ; par tranches de 10, les plus récentes d'abord.
   const [shown, setShown] = useState(STEP);
   useEffect(() => {
@@ -33,9 +37,9 @@ export function ChangelogPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Journal" title="Nouveautés" description={CURRENT_VERSION ? `Les dernières mises à jour du jeu — version actuelle : v${CURRENT_VERSION}.` : "Les dernières mises à jour du jeu."} />
-      {CHANGELOG.length === 0 && <EmptyState icon={<Newspaper />} title="Aucune mise à jour">Les nouveautés du jeu s'afficheront ici.</EmptyState>}
+      {PLAYER_CHANGELOG.length === 0 && <EmptyState icon={<Newspaper />} title="Aucune mise à jour">Les nouveautés du jeu s'afficheront ici.</EmptyState>}
       <div className="flex flex-col gap-3">
-        {CHANGELOG.slice(0, shown).map((entry, i) => (
+        {PLAYER_CHANGELOG.slice(0, shown).map((entry, i) => (
           <motion.div
             key={entry.id}
             initial={{ opacity: 0, y: 8 }}
@@ -50,7 +54,7 @@ export function ChangelogPage() {
                   </span>
                 )}
                 <h2 className="font-display text-base text-slate-100">{entry.title}</h2>
-                {isUnread(entry.id, seenAtOpen) && <Badge variant="success">Nouveau</Badge>}
+                {isUnread(entry.id, seenAtOpen, since) && <Badge variant="success">Nouveau</Badge>}
                 <span className="ml-auto text-xs text-slate-500">
                   {entry.iteration !== null && <>Itération {entry.iteration} · </>}
                   {formatDate(entry.date)}
@@ -71,7 +75,7 @@ export function ChangelogPage() {
             </Card>
           </motion.div>
         ))}
-        {CHANGELOG.length > shown && <ShowMoreButton more={CHANGELOG.length - shown} step={STEP} onClick={() => setShown((n) => n + STEP)} />}
+        {PLAYER_CHANGELOG.length > shown && <ShowMoreButton more={PLAYER_CHANGELOG.length - shown} step={STEP} onClick={() => setShown((n) => n + STEP)} />}
       </div>
     </div>
   );

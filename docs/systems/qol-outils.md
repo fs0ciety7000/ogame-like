@@ -3,6 +3,13 @@
 ## Joueur
 - Prise en main : 10 objectifs, tutoriel scénarisé (raid de Varan, parti à l'instant de la réclamation des roquettes, 2 min de trajet : 6.14.52), Carnet du commandant (guide avancé) en 4 chapitres depuis la 6.4.1 :
   Ton empire (objectif du jour, classe), Colonies (dont route logistique), Reliques et commandants, Ascension.
+  6.14.161 (S1) : récompenses des 10 objectifs réglables (groupe `onboardingRewards`) ; la première recherche verse 20 Acier
+  renforcé, le prix de la recherche du Drone (objectif « 5 drones », qu'un compte neuf ne pouvait pas atteindre) ; le conseil
+  « rang Fer II » cite les vraies sources d'XP (missions, combats, primes, objectifs du jour, succès : jamais bâtiments ni
+  recherches) et mène aux Missions. Une seule grande fenêtre à la fois entre l'histoire, l'annonce et l'alerte de raid (`modalSlotStore`, première arrivée d'abord) :
+  l'histoire d'abord, puis l'alerte. Un compte de moins de `newcomerNews.quietHours` heures (24) n'ouvre aucune annonce (marquée
+  vue) et n'a pas de pastille Nouveautés ; ensuite, seules les notes publiées après le jour d'inscription comptent ; une note
+  `audience: equipe` n'est pas montrée aux joueurs.
 - Accueil « que faire maintenant », frise des chantiers, carte Atelier, défis.
 - Objectifs personnels (6), modèles d'actions (12 × 20 étapes), file d'actions globale, file planifiée des bâtiments.
 - « Tout réclamer », notifications groupées et par catégorie, rappels personnels. 6.14.110 (AC-D, Q76) : chaque réclamation laisse

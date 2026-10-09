@@ -1,5 +1,6 @@
 import { ResourceSelect } from "@/components/game/ResourceSelect";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +37,13 @@ export function ResourcesPage() {
   const [buyId, setBuyId] = useState<ResourceId>("reinforcedSteel");
   const [amount, setAmount] = useState(100);
   const [submitting, setSubmitting] = useState(false);
+  // 6.14.161 (NJ-1) : « échange-la au comptoir » (raison d'un bouton grisé) mène ici, au comptoir (?onglet=comptoir).
+  const [params] = useSearchParams();
+  const focus = params.get("onglet");
+  const ready = !!resources && !!player;
+  useEffect(() => {
+    if (focus === "comptoir" && ready) document.getElementById("comptoir")?.scrollIntoView({ block: "start" });
+  }, [focus, ready]);
 
   if (!resources || !player) return null;
   const economy = economySnapshot({ ...player, resources }, Date.now());
@@ -125,7 +133,7 @@ export function ResourcesPage() {
       {player && <StorageRiskCard player={player} now={Date.now()} />}
       <ResourceHistoryChart history={player?.resourceHistory} />
 
-      <Card>
+      <Card id="comptoir" className="scroll-mt-24">
         <CardHeader>
           <CardTitle>Comptoir d'échange</CardTitle>
         </CardHeader>

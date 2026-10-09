@@ -45,7 +45,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelPulse, LevelUpBurst } from "@/components/ui/level-up-burst";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
-import { affordText, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
+import { AffordReason, CostPills, secondsToAfford } from "@/components/ui/afford";
 import { useProductionRates } from "@/hooks/useLiveResources";
 
 /* 6.12.0 (Q16) : vue liste par défaut sur téléphone au-delà de 10 bâtiments débloqués ; le choix est gardé par appareil. */
@@ -420,7 +420,7 @@ export function BuildingsPage() {
                                   </Button>
                                 </span>
                               </UpgradeCompare>
-                              {wait > 0 && <BlockedReason>{affordText(wait)}</BlockedReason>}
+                              <AffordReason seconds={wait} />
                               <NextTierLine view={tierView} />
                             </>
                           );

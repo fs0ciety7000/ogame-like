@@ -28,7 +28,7 @@ import { hangarLoad, waitingOrders, type HangarLoad } from "@/game/hangar";
 import { hangarWaitingMax } from "@/game/buildingTiers";
 import { unitsAwayOf } from "@/game/fleets";
 import { useFleetStore } from "@/store/fleetStore";
-import { findUnit, getUnitBuildTime, scaleUnitCost, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
+import { findUnit, getUnitBuildTime, scaleUnitCost, UNITS, UNIT_TO_TECH, unitLevelBonus, unitResearchPath } from "@/game/units";
 import { findTech, techBonus } from "@/game/technologies";
 import { CLASS_BEATS, COMBAT_RULES, unitStat } from "@/game/combat";
 import { UNIT_CLASS_LABELS, unitClasses, type UnitClass } from "@/game/unitClasses";
@@ -38,7 +38,7 @@ import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
 import { LevelUpBurst } from "@/components/ui/level-up-burst";
 import { GameIcon } from "@/components/ui/game-icon";
-import { affordText, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
+import { AffordReason, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
 import { useProductionRates } from "@/hooks/useLiveResources";
 
 export function UnitsPage() {
@@ -386,7 +386,7 @@ export function UnitsPage() {
                       ) : (
                         <>
                           Se débloque au Labo : <strong className="text-slate-300">{findTech(UNIT_TO_TECH[unit.id])?.nom ?? "recherche"}</strong>.{" "}
-                          <Link to="/game/labo" className="font-semibold text-cyan-glow underline-offset-2 hover:underline">
+                          <Link to={unitResearchPath(unit.id)} className="font-semibold text-cyan-glow underline-offset-2 hover:underline">
                             Lancer la recherche →
                           </Link>
                         </>
@@ -566,7 +566,7 @@ export function UnitsPage() {
                                 .
                               </BlockedReason>
                             ) : wait > 0 ? (
-                              <BlockedReason>{affordText(wait)}</BlockedReason>
+                              <AffordReason seconds={wait} />
                             ) : willWait ? (
                               <p className="mt-1.5 text-xs text-cyan-glow">
                                 File d'attente : <span className="font-mono tabular-nums">{formatNumber(restQty)}</span> attendr{restQty > 1 ? "ont" : "a"} une place libre (payé{restQty > 1 ? "s" : ""} à la commande).

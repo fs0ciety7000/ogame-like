@@ -33,7 +33,7 @@ Tant que l'étape 3 n'est pas faite, **aucun nouveau système** : seulement des 
 
 | Lot | Constats | Contenu | État |
 |:--|:--|:--|:--|
-| S1 | NJ-2, NJ-1, NJ-8, NJ-6, NJ-10, NJ-18 | Alerte du raid scripté bloquée sous la fenêtre d'histoire ; objectif « 5 drones » impossible (Acier renforcé à 0, comptoir non indiqué) et lien vers la mauvaise techno ; conseil faux sur l'XP ; annonce 6.14 et notes de développeur montrées à un débutant | à faire |
+| S1 | NJ-2, NJ-1, NJ-8, NJ-6, NJ-10, NJ-18 | Alerte du raid scripté bloquée sous la fenêtre d'histoire ; objectif « 5 drones » impossible (Acier renforcé à 0, comptoir non indiqué) et lien vers la mauvaise techno ; conseil faux sur l'XP ; annonce 6.14 et notes de développeur montrées à un débutant | livré (6.14.161) |
 | S2 | NJ-3 | Arbre du Labo illisible sur mobile : vue liste | à faire |
 | S3 | NJ-4, NJ-5 | Récompenses du raid d'initiation et du Carnet démesurées (864 000 à la 18e minute pour 15/s de production) ; ferraille seul goulot : proposition chiffrée puis réglage | à faire |
 | S4 | autres 🟠 et 🟡 | Barre de ressources tronquée, « Espionner » sans texte, aucun message pendant un redéploiement (502)… | à faire |

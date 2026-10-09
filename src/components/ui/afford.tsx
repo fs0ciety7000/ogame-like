@@ -1,4 +1,5 @@
 import { Clock, Info } from "lucide-react";
+import { Link } from "react-router-dom";
 import { CostPill } from "@/components/ui/hud";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger, type TooltipRow } from "@/components/ui/tooltip";
 import { ResourceIcon } from "@/components/ui/game-icon";
@@ -94,10 +95,23 @@ export function BlockedReason({ children, tone = "warn", className }: { children
   );
 }
 
-/** Texte « ressources insuffisantes » avec l'estimation d'attente. */
-export function affordText(seconds: number): string {
-  if (seconds <= 0) return "";
+/** 6.14.161 (NJ-1) : le comptoir d'échange, en bas de la page Ressources (`?onglet=comptoir` fait défiler jusqu'à lui). */
+const EXCHANGE_PATH = "/game/ressources?onglet=comptoir";
+
+/** Raison « ressources insuffisantes » avec l'estimation d'attente (rien si `seconds` ≤ 0). */
+export function AffordReason({ seconds }: { seconds: number }) {
+  if (seconds <= 0) return null;
   // 6.11.13 (P1) : une ligne ; la pastille de coût dit déjà ce qui manque (« manque 20 k »).
-  if (!Number.isFinite(seconds)) return "Ta production n'y suffira pas : passe par le marché.";
-  return `Disponible dans ~${formatDuration(Math.ceil(seconds))} à production constante.`;
+  // 6.14.161 (NJ-1) : une ressource que tu ne produis pas (Acier renforcé…) s'obtient au comptoir : le lien y mène.
+  if (!Number.isFinite(seconds))
+    return (
+      <BlockedReason>
+        Ta production n'y suffira pas : échange-la au{" "}
+        <Link to={EXCHANGE_PATH} className="font-semibold text-cyan-glow underline-offset-2 hover:underline">
+          comptoir
+        </Link>
+        .
+      </BlockedReason>
+    );
+  return <BlockedReason>Disponible dans ~{formatDuration(Math.ceil(seconds))} à production constante.</BlockedReason>;
 }

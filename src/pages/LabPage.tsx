@@ -3,6 +3,7 @@ import { playerResearchTimeFactor, researchTimeBreakdown } from "@/game/bonuses"
 import { AmberAmount } from "@/components/ui/amber";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { bountyState } from "@/game/bounties";
 import { GameActionError, startResearch } from "@/services/playerService";
 import { TechTree } from "@/components/game/TechTree";
-import { affordText, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
+import { AffordReason, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
 import { CostPill, LevelTicks } from "@/components/ui/hud";
 import { useProductionRates } from "@/hooks/useLiveResources";
 import type { ResourceId } from "@/types/game";
@@ -29,7 +30,14 @@ export function LabPage() {
   const player = usePlayerStore((s) => s.player);
   const queues = usePlayerStore((s) => s.queues);
   const uid = useAuthStore((s) => s.user?.uid);
-  const [selectedId, setSelectedId] = useState<string>(TECHNOLOGIES[0].id);
+  // 6.14.161 (NJ-8) : `?tech=<id>` (lien « Lancer la recherche → » d'une unité verrouillée) sélectionne et centre cette techno.
+  const [params] = useSearchParams();
+  const asked = params.get("tech");
+  const focusTech = asked && findTech(asked) ? asked : null;
+  const [selectedId, setSelectedId] = useState<string>(() => focusTech ?? TECHNOLOGIES[0].id);
+  useEffect(() => {
+    if (focusTech) setSelectedId(focusTech);
+  }, [focusTech]);
   const [pending, setPending] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const rates = useProductionRates(player);
@@ -96,6 +104,7 @@ export function LabPage() {
           levels={levels}
           ownedPlans={plans}
           selectedId={selectedId}
+          initialFocus={focusTech}
           activeIds={new Set(queues.activeResearches.map((r) => r.id))}
           onSelect={setSelectedId}
           fullscreen={fullscreen}
@@ -202,7 +211,7 @@ export function LabPage() {
                     ) : amberLack > 0 ? (
                       <BlockedReason tone="block">Il te manque <AmberAmount value={amberLack} /> : gagne-le en remplissant des primes Kesh'Vaar.</BlockedReason>
                     ) : wait > 0 ? (
-                      <BlockedReason>{affordText(wait)}</BlockedReason>
+                      <AffordReason seconds={wait} />
                     ) : null}
                   </>
                 );

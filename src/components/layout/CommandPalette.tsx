@@ -133,7 +133,7 @@ export function CommandPalette() {
       .map((b) => ({ key: `building-${b.id}`, label: b.name, sublabel: "Bâtiment", icon: thumb(b.image) ?? <Building2 className="h-4 w-4 text-cyan-glow" />, run: () => navigate("/game/batiments") }));
     const techItems: PaletteItem[] = TECHNOLOGIES.filter((t) => match(t.nom))
       .slice(0, 4)
-      .map((t) => ({ key: `tech-${t.id}`, label: t.nom, sublabel: "Technologie", icon: <FlaskConical className="h-4 w-4 text-cyan-glow" />, run: () => navigate("/game/labo") }));
+      .map((t) => ({ key: `tech-${t.id}`, label: t.nom, sublabel: "Technologie", icon: <FlaskConical className="h-4 w-4 text-cyan-glow" />, run: () => navigate(`/game/labo?tech=${encodeURIComponent(t.id)}`) }));
     // 6.14.130 (AJ27-8, AJ-9) : reliques, boss, colonies, talents, modules, classes et officiers (registres en vigueur).
     const contentItems: PaletteItem[] = matchPaletteContent(q, Date.now()).map((e) => {
       const Icon = CONTENT_ICONS[e.kind];
